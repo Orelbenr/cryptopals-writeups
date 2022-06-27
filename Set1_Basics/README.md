@@ -16,7 +16,7 @@
 
 Using **bytes.fromhex** to decode the hex string into bytes object.
 Then, using **base64.b64encode** to represent each char by 6 bits.
-```json
+```python
 string_src = '49276d206b696c6c696e6720796f757220627261696e206c696b65206120706f69736f6e6f7573206d757368726f6f6d'  
 raw_src = bytes.fromhex(string_src)  
 # raw_src = b"I'm killing your brain like a poisonous mushroom"  
@@ -36,13 +36,13 @@ print(b64_string == out)
 
 First, create a function that xor bytes objects.
 The function xor each byte in a loop.
-```json
+```python
 def xor_bytes(b1: bytes, b2: bytes) -> bytes:  
     return bytes([_a ^ _b for _a, _b in zip(b1, b2)])
 ```
 
 Now, use **bytes.fromhex** to decode the strings, and **hex** to encode the result:
-```json
+```python
 src = bytes.fromhex('1c0111001f010100061a024b53535009181c')  
 mask = bytes.fromhex('686974207468652062756c6c277320657965')  
 result = xor_bytes(src, mask)  
@@ -59,7 +59,7 @@ print(result_hex == out)
 > Challenge: https://cryptopals.com/sets/1/challenges/3
 
 Using the following characters distribution:
-```json
+```python
 {'a': 0.0651738, 'b': 0.0124248, 'c': 0.0217339, 'd': 0.0349835, 'e': 0.1041442, 'f': 0.0197881, 'g': 0.0158610,  
  'h': 0.0492888, 'i': 0.0558094, 'j': 0.0009033, 'k': 0.0050529, 'l': 0.0331490, 'm': 0.0202124, 'n': 0.0564513,  
  'o': 0.0596302, 'p': 0.0137645, 'q': 0.0008606, 'r': 0.0497563, 's': 0.0515760, 't': 0.0729357, 'u': 0.0225134,  
@@ -69,7 +69,7 @@ Using the following characters distribution:
 We give each string a score which indicates how much it's chracters disribution is similar to the real one.
 To evaluate this 'similarity' we use the **Bhattacharyya distance** (https://en.wikipedia.org/wiki/Bhattacharyya_distance)
 
-```json
+```python
 def bhattacharyya_distance(dist1: dict, dist2: dict) -> float:  
     bc_coeff = 0  
 	for letter in FREQ.keys():  
@@ -79,7 +79,7 @@ def bhattacharyya_distance(dist1: dict, dist2: dict) -> float:
 ```
 
 The scoring function is:
-```json
+```python
 def score_string(word: bytes) -> float:  
 	curr_freq = {letter: 0 for letter in FREQ.keys()}  
 
@@ -101,7 +101,7 @@ def score_string(word: bytes) -> float:
 ```
 
 And now we iterate each possible byte value  and return the best result:
-```json
+```python
 src = bytes.fromhex('1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736')  
   
 max_score = 0  
@@ -125,7 +125,7 @@ print(best_res)
 We know that only one line has been encrypted by single-character XOR.
 Thus, we use the previous challenge approche and find the best likely line:
 
-```json
+```python
 # read given file  
 with open('4_list.txt', 'r') as fh:  
     Lines = fh.readlines()  
@@ -150,12 +150,12 @@ print(best_word)
 
 Xor each byte of of the given string with it's matching byte from the key. The byte index of the key is periodic of len(key)
 
- ```json
+ ```python
 def repeating_key_xor(stream: bytes, key: bytes) -> bytes:  
     return bytes([letter ^ key[idx % len(key)] for idx, letter in enumerate(stream)])
 ```
 
- ```json
+ ```python
 stream = b"Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal"  
 key = b'ICE'  
   
@@ -170,7 +170,7 @@ print(res.hex() == out)
 > Challenge: https://cryptopals.com/sets/1/challenges/6
 
 We start with Hamming distance. In order to count the bit difference between two bytes objects, we xor them and count the remaining bits. The counting of bits in each byte is accomplished by global lookup-table for faster calculations:
-```json
+```python
 # global 
 COUNTS = [bin(x).count("1") for x in range(256)]
 
@@ -182,7 +182,7 @@ def hamming_dist(b1: bytes, b2: bytes):
 ```
 
 We estimate the **key size** by bruteforcing many possible values. For each value, we xor chunks of length keysize, and checking hamming difference between close blocks.
-```json
+```python
 def eval_key_size(stream: bytes, max_key_size: int) -> int:  
 	# default values  
 	min_dist = max_key_size * 8  
@@ -208,7 +208,7 @@ def eval_key_size(stream: bytes, max_key_size: int) -> int:
 ```
 
 Now we divide and transpose the cypher to blocks, such that each block contains letters which were xor'd with the same byte:
-```json
+```python
 def transpose_blocks(stream: bytes, key_size: int) -> list:  
 	block_list = []  
 	for shift in range(key_size):  
@@ -218,7 +218,7 @@ def transpose_blocks(stream: bytes, key_size: int) -> list:
 ```
 
 Each block is a **single-character XOR cypher** that we know to decypher. So, we reconstruct the full key by decyphering the blocks.
-```json
+```python
 key = []  
 for block in block_list:  
   key.append(decode_single_byte_xor_cypher(block))  
@@ -228,7 +228,7 @@ print(key) # b'Terminator X: Bring the noise'
 ```
 
 Finally we can decrypt the code:
-```json
+```python
 word = repeating_key_xor(cypher, key)  
 print(f'{word=}') 
 # b"I'm back and I'm ringin' the bell \nA rockin' on the mike while the fly girls yell \nIn ecstasy in the back of me \nWell that's my DJ Deshay cuttin' all them Z's \nHittin' hard and the girlies goin' crazy \nVanilla's on the mike, man I'm not lazy. \n\nI'm lettin' my drug kick in \nIt controls my mouth and I begin \nTo just let it flow, let my concepts go \nMy posse's to the side yellin', Go Vanilla Go! \n\nSmooth 'cause that's the way I will be \nAnd if you don't give a damn, then \nWhy you starin' at me \nSo get off 'cause I control the stage \nThere's no dissin' allowed \nI'm in my own phase \nThe girlies sa y they love me and that is ok \nAnd I can dance better than any kid n' play \n\nStage 2 -- Yea the one ya' wanna listen to \nIt's off my head so let the beat play through \nSo I can funk it up and make it sound good \n1-2-3 Yo -- Knock on some wood \nFor good luck, I like my rhymes atrocious \nSupercalafragilisticexpialidocious \nI'm an effect and that you can bet \nI can take a fly girl and make her wet. \n\nI'm like Samson -- Samson to Delilah \nThere's no denyin', You can try to hang \nBut you'll keep tryin' to get my style \nOver and over, practice makes perfect \nBut not if you're a loafer. \n\nYou'll get nowhere, no place, no time, no girls \nSoon -- Oh my God, homebody, you probably eat \nSpaghetti with a spoon! Come on and say it! \n\nVIP. Vanilla Ice yep, yep, I'm comin' hard like a rhino \nIntoxicating so you stagger like a wino \nSo punks stop trying and girl stop cryin' \nVanilla Ice is sellin' and you people are buyin' \n'Cause why the freaks are jockin' like Crazy Glue \nMovin' and groovin' trying to sing along \nAll through the ghetto groovin' this here song \nNow you're amazed by the VIP posse. \n\nSteppin' so hard like a German Nazi \nStartled by the bases hittin' ground \nThere's no trippin' on mine, I'm just gettin' down \nSparkamatic, I'm hangin' tight like a fanatic \nYou trapped me once and I thought that \nYou might have it \nSo step down and lend me your ear \n'89 in my time! You, '90 is my year. \n\nYou're weakenin' fast, YO! and I can tell it \nYour body's gettin' hot, so, so I can smell it \nSo don't be mad and don't be sad \n'Cause the lyrics belong to ICE, You can call me Dad \nYou're pitchin' a fit, so step back and endure \nLet the witch doctor, Ice, do the dance to cure \nSo come up close and don't be square \nYou wanna battle me -- Anytime, anywhere \n\nYou thought that I was weak, Boy, you're dead wrong \nSo come on, everybody and sing this song \n\nSay -- Play that funky music Say, go white boy, go white boy go \nplay that funky music Go white boy, go white boy, go \nLay down and boogie and play that funky music till you die. \n\nPlay that funky music Come on, Come on, let me hear \nPlay that funky music white boy you say it, say it \nPlay that funky music A little louder now \nPlay that funky music, white boy Come on, Come on, Come on \nPlay that funky music \n"
