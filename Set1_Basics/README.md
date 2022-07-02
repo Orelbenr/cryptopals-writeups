@@ -1,4 +1,5 @@
 
+
 # Set 1: Basics
 
 ## Table of contents
@@ -67,7 +68,7 @@ Using the following characters distribution:
  'v': 0.0082903, 'w': 0.0171272, 'x': 0.0013692, 'y': 0.0145984, 'z': 0.0007836, ' ': 0.1918182}
 ```
 
-We give each string a score which indicates how much it's chracters disribution is similar to the real one.
+We give each string a score that indicates how much its character distribution is similar to the real one.
 To evaluate this 'similarity' we use the **Bhattacharyya distance** (https://en.wikipedia.org/wiki/Bhattacharyya_distance)
 
 ```python
@@ -124,7 +125,7 @@ print(best_res)
 > Challenge: https://cryptopals.com/sets/1/challenges/4
 
 We know that only one line has been encrypted by single-character XOR.
-Thus, we use the previous challenge approche and find the best likely line:
+Thus, we use the previous challenge approach and find the best likely line:
 
 ```python
 # read given file  
@@ -149,7 +150,7 @@ print(best_word)
 
 > Challenge: https://cryptopals.com/sets/1/challenges/5
 
-Xor each byte of of the given string with it's matching byte from the key. The byte index of the key is periodic of len(key)
+Xor each byte of the given string with its matching byte from the key. The byte index of the key is periodic of len(key)
 
  ```python
 def repeating_key_xor(stream: bytes, key: bytes) -> bytes:  
@@ -170,7 +171,7 @@ print(res.hex() == out)
 
 > Challenge: https://cryptopals.com/sets/1/challenges/6
 
-We start with Hamming distance. In order to count the bit difference between two bytes objects, we xor them and count the remaining bits. The counting of bits in each byte is accomplished by global lookup-table for faster calculations:
+We start with Hamming distance. To count the bit difference between two bytes objects, we xor them and count the remaining bits. The counting of bits in each byte is accomplished by a global lookup table for faster calculations:
 ```python
 # global 
 COUNTS = [bin(x).count("1") for x in range(256)]
@@ -208,7 +209,7 @@ def eval_key_size(stream: bytes, max_key_size: int) -> int:
 	return best_key_size
 ```
 
-Now we divide and transpose the cipher to blocks, such that each block contains letters which were xor'd with the same byte:
+Now we divide and transpose the cipher to blocks, such that each block contains letters that were xor'd with the same byte:
 ```python
 def transpose_blocks(stream: bytes, key_size: int) -> list:  
 	block_list = []  
@@ -255,7 +256,7 @@ print(plaintext)
 
 > Challenge: https://cryptopals.com/sets/1/challenges/8
 
-The ECB mode is semantically insecure, and exposes correlation between blocks. Thus, we check for the relative number of distinct blocks and total number of blocks:
+The ECB mode is semantically insecure and exposes correlation between blocks. Thus, we check for the relative number of distinct blocks and the total number of blocks:
 ```python
 def score_ecb_mode(cipher: bytes) -> float:  
 	""" evaluate repetition of blocks """  
