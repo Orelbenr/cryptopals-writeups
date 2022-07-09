@@ -41,7 +41,7 @@ def aes_cbc_encrypt(plaintext: bytes, key: bytes, nonce: bytes = bytes(AES_BLOCK
     if len(nonce) != AES_BLOCK_SIZE:
         raise ValueError(f"Nonce must be of size {AES_BLOCK_SIZE}")
     if len(plaintext) % AES_BLOCK_SIZE != 0:
-        raise ValueError(f"plaintext must have length multiple of the block size")
+        raise ValueError(f"plaintext length must be a multiply of the block size")
 
     # create AES ECB mode object
     cipher_obj = AES.new(key, AES.MODE_ECB)

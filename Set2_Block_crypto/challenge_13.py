@@ -44,7 +44,7 @@ from Utils.AES import aes_ecb_encrypt, aes_ecb_decrypt
 AES_BLOCK_SIZE = 16
 
 
-class UserProfile(object):
+class UserProfile:
     def __init__(self):
         self.key = get_random_bytes(AES_BLOCK_SIZE)
 
@@ -109,13 +109,5 @@ def attack():
     user_profile.set_user_profile(attack_sequence)
 
 
-def main():
-    # user_profile = UserProfile()
-    # c1 = user_profile.get_user_profile('mama@orel.com')
-    # user_profile.set_user_profile(c1)
-
-    attack()
-
-
 if __name__ == '__main__':
-    main()
+    attack()

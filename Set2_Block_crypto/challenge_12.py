@@ -83,7 +83,7 @@ def detect_msg_length(block_size: int) -> int:
         tmp_len = len(encryption_oracle(b'A'*i))
         if tmp_len > base_len:
             # the padding we added indicates the padding of base_len
-            return base_len - i + 1
+            return base_len - i
 
 
 def detect_block_size() -> int:
@@ -101,28 +101,20 @@ def detect_block_size() -> int:
     raise StopIteration('Max block size exceeded')
 
 
-def split_to_blocks(stream: bytes, block_size: int) -> list[bytes]:
-    if len(stream) % block_size != 0:
-        raise ValueError('stream length must divide by block_size!')
-
-    blocks = [stream[i:i + block_size] for i in range(0, len(stream), block_size)]
-    return blocks
-
-
-def detect_single_byte(cipher_block: bytes, ref_block: bytes, block_size: int) -> int:
+def detect_single_byte(ref_block: bytes, padding: bytes, block_size: int) -> int:
     # verify inputs
-    if len(cipher_block) % block_size != 0:
-        raise ValueError('cipher_block length error')
-    if (len(ref_block) + 1) % block_size != 0:
+    if len(ref_block) % block_size != 0:
         raise ValueError('ref_block length error')
+    if (len(padding) + 1) % block_size != 0:
+        raise ValueError('padding length error')
 
     # look for correct single byte
     for i in range(2 ** 8):
-        full_ref_block = ref_block + bytes([i])
-        res = encryption_oracle(full_ref_block)
-        res = split_to_blocks(res, block_size)[0]
+        guess_block = padding + bytes([i])
+        res = encryption_oracle(guess_block)
+        res = res[:block_size]
 
-        if res == cipher_block:
+        if res == ref_block:
             return i
 
     raise StopIteration('None of the bytes matched')
@@ -136,30 +128,22 @@ def decrypt_ecb():
     print(f"{mode} detected.")
 
     # decrypt hidden cipher
-    plaintext = b''
+    plaintext = b'A' * (block_size - 1)
 
-    # decrypt each block in a loop
-    num_blocks = len(encryption_oracle(b'')) // block_size
-    for block_idx in range(num_blocks):
-        # decrypt single block
-        for i in range(block_size):
-            # extract cipher block
-            buffer = b'A' * (block_size - 1 - i)
-            tmp_cipher = encryption_oracle(buffer)
-            cipher_block = split_to_blocks(tmp_cipher, block_size)[block_idx]
+    for i in range(msg_len):
+        # create reference block
+        pad_len = (block_size - i - 1) % block_size
+        ref_block = encryption_oracle(b'A' * pad_len)
+        ref_block_idx = i - (i % block_size)
+        ref_block = ref_block[ref_block_idx: ref_block_idx + block_size]
 
-            # build history
-            last_bytes = plaintext[-(block_size - 1):]
-            pad = block_size - 1 - len(last_bytes)
-            ref_block = b'A' * pad + last_bytes
+        # detect single byte
+        padding = plaintext[-block_size+1:]
+        new_byte = detect_single_byte(ref_block, padding, block_size)
+        plaintext += bytes([new_byte])
 
-            # detect byte
-            detected_byte = detect_single_byte(cipher_block, ref_block, block_size)
-            plaintext += bytes([detected_byte])
-
-            # check for terminal condition
-            if len(plaintext) == msg_len:
-                return plaintext
+    # remove initial padding and return
+    return plaintext[block_size-1:]
 
 
 def main():

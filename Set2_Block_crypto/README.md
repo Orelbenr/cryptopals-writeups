@@ -1,5 +1,4 @@
 
-
 # Set 2: Block crypto
 
 ## Table of contents
@@ -9,6 +8,8 @@
 12. [Challenge 12 - Byte-at-a-time ECB decryption (Simple)](#challenge-12---byte-at-a-time-ecb-decryption-simple)
 13. [Challenge 13 - ECB cut-and-paste](#challenge-13---ecb-cut-and-paste)
 14. [Challenge 14 - Byte-at-a-time ECB decryption (Harder)](#challenge-14---byte-at-a-time-ecb-decryption-harder)
+15. [Challenge 15 - PKCS#7 padding validation](#challenge-15---pkcs7-padding-validation)
+16. [Challenge 16 - CBC bitflipping attacks](#challenge-16---cbc-bitflipping-attacks)
 
 
 ## Challenge 9 - Implement PKCS#7 padding
@@ -17,19 +18,15 @@
 
 We simply calc how many bytes are missing and append them to the end of the stream:
 ```python
-def PKCS7_pad(stream: bytes, block_size: int) -> bytes:  
-	remainder = len(stream) % block_size  
-	if remainder != 0:  
-		pad_len = block_size - remainder  
-		return stream + bytes([pad_len]*pad_len)  
-	else:  
-		return stream
+def pkcs7_pad(stream: bytes, block_size: int) -> bytes:  
+  pad_len = block_size - (len(stream) % block_size)  
+  return stream + bytes([pad_len] * pad_len)
 ```
 ```python
 src = b"YELLOW SUBMARINE"  
 target = b"YELLOW SUBMARINE\x04\x04\x04\x04"  
   
-result = PKCS7_pad(src, 20)  
+result = pkcs7_pad(src, 20)  
 print(result == target)
 ```
 
@@ -44,7 +41,7 @@ We implement AES CBC encryption as described: each ciphertext block is added to 
 	if len(nonce) != AES_BLOCK_SIZE:  
 		raise ValueError(f"Nonce must be of size {AES_BLOCK_SIZE}")  
 	if len(plaintext) % AES_BLOCK_SIZE != 0:  
-		raise ValueError(f"plaintext must have length multiple of the block size")  
+		raise ValueError(f"plaintext length must be a multiply of the block size")  
 
 	# create AES ECB mode object  
 	cipher_obj = AES.new(key, AES.MODE_ECB)  
@@ -176,10 +173,10 @@ print(real_mode == predicted_mode)
 First, we update the encryption oracle:
 ```python
 def encryption_oracle(plaintext: bytes) -> bytes:  
-	unknown_string = base64.b64decode("Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkg"  
-									  "aGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBq" 
-									  "dXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUg"
-									  "YnkK")  
+	unknown_string = base64.b64decode("Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkg"
+	"aGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBq"
+	"dXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUg"
+	"YnkK")  
 	plaintext = plaintext + unknown_string  
 	plaintext = PKCS7_pad(plaintext, AES_BLOCK_SIZE)  
 
@@ -219,28 +216,30 @@ def detect_msg_length(block_size: int) -> int:
 		tmp_len = len(encryption_oracle(b'A'*i))  
 		if tmp_len > base_len:  
 			# the padding we added indicates the padding of base_len  
-			return base_len - i + 1
+			return base_len - i
 ```
 
 4) Decrypt the cipher: we decrypt one byte at a time (256 possibilities) using a brute-force approach. 
 Remember that AES encryption acts on blocks the size of 16 bytes, so to decrypt each byte at a time, we need to know 15 bytes of the block and brute-force the remaining one. This can be done by padding the start of the stream, such that in each iteration, only one unknown byte is shifted into our observable block.
 We create a function for brute-forcing the last byte in the block:
 ```python
-def detect_single_byte(cipher_block: bytes, ref_block: bytes, block_size: int) -> int:  
+def detect_single_byte(ref_block: bytes, padding: bytes, block_size: int) -> int:  
 	# verify inputs  
-	if len(cipher_block) % block_size != 0:  
-		raise ValueError('cipher_block length error')  
-	if (len(ref_block) + 1) % block_size != 0:  
+	if len(ref_block) % block_size != 0:  
 		raise ValueError('ref_block length error')  
+	if (len(padding) + 1) % block_size != 0:  
+		raise ValueError('padding length error')  
 
 	# look for correct single byte  
 	for i in range(2 ** 8):  
-		full_ref_block = ref_block + bytes([i])  
-		res = encryption_oracle(full_ref_block)  
-		res = split_to_blocks(res, block_size)[0]  
+		guess_block = padding + bytes([i])  
+		res = encryption_oracle(guess_block)  
+		res = res[:block_size]  
 
-		if res == cipher_block:  
+		if res == ref_block:  
 			return i  
+
+	raise StopIteration('None of the bytes matched')
 ```
 
 And another function to loop in the cipher bytes, and decrypt each byte at a time:
@@ -250,33 +249,25 @@ def decrypt_ecb():
 	block_size = detect_block_size()  
 	msg_len = detect_msg_length(block_size)  
 	mode = detect_encryption_mode(encryption_oracle(b'1' * 50))  
-	print(f"{mode} detected.")
+	print(f"{mode} detected.")  
 
 	# decrypt hidden cipher  
-	plaintext = b''  
+	plaintext = b'A' * (block_size - 1)  
 
-	# decrypt each block in a loop  
-	num_blocks = len(encryption_oracle(b'')) // block_size  
-	for block_idx in range(num_blocks):  
-		# decrypt single block  
-		for i in range(block_size):  
-			# extract cipher block  
-			buffer = b'A' * (block_size - 1 - i)  
-			tmp_cipher = encryption_oracle(buffer)  
-			cipher_block = split_to_blocks(tmp_cipher, block_size)[block_idx]  
+	for i in range(msg_len):  
+		# create reference block  
+		pad_len = (block_size - i - 1) % block_size  
+		ref_block = encryption_oracle(b'A' * pad_len)  
+		ref_block_idx = i - (i % block_size)  
+		ref_block = ref_block[ref_block_idx: ref_block_idx + block_size]  
 
-			# build history  
-			last_bytes = plaintext[-(block_size - 1):]  
-			pad = block_size - 1 - len(last_bytes)  
-			ref_block = b'A' * pad + last_bytes  
+		# detect single byte  
+		padding = plaintext[-block_size+1:]  
+		new_byte = detect_single_byte(ref_block, padding, block_size)  
+		plaintext += bytes([new_byte])  
 
-			# detect byte  
-			detected_byte = detect_single_byte(cipher_block, ref_block, block_size)  
-			plaintext += bytes([detected_byte])  
-
-			# check for terminal condition  
-			if len(plaintext) == msg_len:  
-				return plaintext
+	# remove initial padding and return  
+	return plaintext[block_size-1:]
 ```
 
 Finally we can check the results:
@@ -298,7 +289,7 @@ We start by creating **UserProfiler** which has two functionalities:
 2. It allows the user to enter his **encrypted profile**. Then, the profiler decrypts the profile and parses it to extract its contents.
 
 ```python
-class UserProfile(object):  
+class UserProfile:  
 	def __init__(self):  
 		self.key = get_random_bytes(AES_BLOCK_SIZE)  
 
@@ -381,3 +372,265 @@ user_profile.set_user_profile(attack_sequence)
 
 > Challenge: https://cryptopals.com/sets/2/challenges/14
 
+The main problem in this challenge is that we don't know the length of the prefix, and as a result, we are not aligned with the cipher blocks.
+
+Therefore, we start by evaluating the prefix length, and then continue the same as in [challenge 12](#challenge-12---byte-at-a-time-ecb-decryption-simple).
+
+1. The first function evaluates the padding length required to extend the prefix into an integer number of cipher block lengths. We can utilize the ECB property of the cipher, and look for the alignment needed to create two identical blocks in the output ciphertext:
+```python
+def detect_alignment(oracle: Oracle, block_size: int) -> int:  
+	"""  
+	Evaluate the padding length required to extend the prefix, 
+	into an integer number of [block_size] lengths. 
+	"""  
+	base_repetitions = count_repetitions(oracle.encrypt(b''))  
+
+	# repeat [num_attempts] to avoid random correct alignment  
+	num_attempts = 5  
+	for i in range(num_attempts):  
+		repetitions = []  
+		for pad_len in range(block_size):  
+			stream = b'A' * pad_len + 2 * bytes(range(i, block_size+i))  
+			num_repetitions = count_repetitions(oracle.encrypt(stream))  
+			repetitions.append(num_repetitions)  
+
+			# if only one padding align, we know it is correct  
+			rep_max_val = max(repetitions)  
+			if repetitions.count(rep_max_val) == 1:  
+				return repetitions.index(rep_max_val)  
+
+	raise ValueError('Cipher mode is probably not ECB')
+``` 
+
+2. Now, we know the alignment, and we can look for the output block that changes as a result of a change in the input. (The ECB property guarantees it will be a single block..)
+
+```python
+def detect_attacker_index(oracle: Oracle, block_size: int, alignment_pad: int) -> int:  
+	"""  
+	Detect the starting location of our plaintext in the output ciphertext. 
+	The function assumes the cipher is ECB-AES, and searches for the output block 
+	that changes as a result of a change in the input. 
+	"""  
+	command1 = b'A' * alignment_pad + b'1' * block_size  
+	response1 = oracle.encrypt(command1)  
+	command2 = b'A' * alignment_pad + b'2' * block_size  
+	response2 = oracle.encrypt(command2)  
+
+	for i in range(0, len(response1), block_size):  
+		block1 = response1[i:i+block_size]  
+		block2 = response2[i:i + block_size]  
+
+		if block1 != block2:  
+			return i  
+
+	raise ValueError('detect_attacker_index failed')
+```
+
+3. We have the prefix length, so we can trim it from the output ciphertext. For simplicity, we create **AttackerOracle**, which deals with the prefix for us:
+
+```python
+class AttackerOracle:  
+	def __init__(self, oracle: Oracle):  
+		self.oracle = oracle  
+		self.block_size = detect_block_size(self.oracle)  
+		self.alignment_pad = detect_alignment(self.oracle, self.block_size)  
+		self.attacker_idx = detect_attacker_index(self.oracle, self.block_size, self.alignment_pad)  
+
+	def encrypt(self, plaintext):  
+		ext_plaintext = self.alignment_pad * b'A' + plaintext  
+		ciphertext = self.oracle.encrypt(ext_plaintext)  
+		ciphertext = ciphertext[self.attacker_idx:]  
+		return ciphertext
+```
+
+4. Now, we can detect one byte at a time just like challenge 12:
+
+```python
+def decrypt_ecb():  
+	oracle = Oracle()  
+	attacker_oracle = AttackerOracle(oracle)  
+
+	block_size = attacker_oracle.block_size  
+	msg_len = detect_msg_length(attacker_oracle, block_size)  
+
+	# decrypt hidden cipher  
+	plaintext = b'A' * (block_size - 1)  
+
+	for i in range(msg_len):  
+		# create reference block  
+		pad_len = (block_size - i - 1) % block_size  
+		ref_block = attacker_oracle.encrypt(b'A' * pad_len)  
+		ref_block_idx = i - (i % block_size)  
+		ref_block = ref_block[ref_block_idx: ref_block_idx + block_size]  
+
+		# detect single byte  
+		padding = plaintext[-block_size+1:]  
+		new_byte = detect_single_byte(attacker_oracle, ref_block, padding, block_size)  
+		plaintext += bytes([new_byte])  
+
+	# remove initial padding and return  
+	return plaintext[block_size-1:]
+```
+
+The result:
+```python
+decrypted_target = decrypt_ecb()  
+print(decrypted_target)
+# b"Rollin' in my 5.0\nWith my rag-top down so my hair can blow\nThe girlies on standby waving just to say hi\nDid you stop? No, I just drove by\n"
+```
+
+## Challenge 15 - PKCS#7 padding validation
+
+> Challenge: https://cryptopals.com/sets/2/challenges/15
+
+To determines if the input has a valid PKCS#7 padding, we iterate all the possible padding lengths (=block_size) and check the validity of each one. When we find valid padding, we can just remove it from the input end.
+
+```python
+def pkcs7_unpad(stream: bytes, block_size: int) -> bytes:  
+	if len(stream) % block_size != 0:  
+		raise ValueError('steam length must be a multiply of block_size')  
+
+	for i in range(block_size, 0, -1):  
+		guessed_padding = stream[-i:]  
+		# check if the guess is valid  
+		padding_vals = set(guessed_padding)  
+		if len(padding_vals) == 1 and padding_vals.pop() == i:  
+			return stream[:-i]  
+
+	# no padding was found  
+	raise AssertionError('No padding was found!')
+```
+
+And check if it works:
+```python
+assert b'ICE ICE BABY' == pkcs7_unpad(b'ICE ICE BABY\x04\x04\x04\x04', AES_BLOCK_SIZE)  
+
+try:  
+	pkcs7_unpad(b'ICE ICE BABY\x05\x05\x05\x05', AES_BLOCK_SIZE)  
+except AssertionError:  
+	print('No padding was found')  
+else:  
+	assert False  
+
+try:  
+	pkcs7_unpad(b'ICE ICE BABY\x01\x02\x03\x04', AES_BLOCK_SIZE)  
+except AssertionError:  
+	print('No padding was found')  
+else:  
+	assert False
+```
+
+## Challenge 16 - CBC bitflipping attacks
+
+> Challenge: https://cryptopals.com/sets/2/challenges/16
+
+We start by implementing two functions. 
+The first one prepends and appends some string to the user plaintext. Then, it encrypts the result in AES-CBC mode under some random key.
+The second function decrypt the user ciphertext, parse the result and look for the pair **admin=true**.
+```python
+class Oracle:  
+	def __init__(self):  
+		self.key = get_random_bytes(AES_BLOCK_SIZE)  
+		self.nonce = get_random_bytes(AES_BLOCK_SIZE)  
+
+	def encode(self, plaintext: bytes) -> bytes:  
+		prefix = b"comment1=cooking%20MCs;userdata="  
+		suffix = b";comment2=%20like%20a%20pound%20of%20bacon"  
+
+		# quote out ";" and "="  
+		plaintext = plaintext.replace(b";", b"").replace(b"=", b"")  
+		plaintext = prefix + plaintext + suffix  
+
+		# encrypt and return  
+		ciphertext = aes_cbc_encrypt(plaintext, key=self.key, nonce=self.nonce, add_padding=True)  
+		return ciphertext  
+
+	def parse(self, ciphertext: bytes) -> bool:  
+		decrypted = aes_cbc_decrypt(ciphertext, key=self.key, nonce=self.nonce, remove_padding=True)  
+		return b';admin=true;' in decrypted
+```
+
+Now, as the **attacker** we have access to **encode** which provides us with the encoded message. Our target is to build an encoded message which will be parsed as **admin=true**.
+
+Let's take a look at the AES-CBC scheme. 
+Remember that $c_m=E(p_m+c_{m-1})$, and imagine we want to force the decryption of $p_m$ into some value of our own choice denoted by $p_{target}$.
+
+We know the original values of $c_m$, $c_{m-1}$, $p_m$.
+And thus if we set:  
+$$\widehat{c_{m-1}}=c_{m-1}+p_{target}+p_m$$ 
+The decryption of $p_m$ will evaluate into:
+$$\widehat{p_m}=\widehat{c_{m-1}}+D(c_m)=\widehat{c_{m-1}}+p_m+c_{m-1}$$ $$=c_{m-1}+p_{target}+p_m+p_m+c_{m-1}=p_{target}$$
+
+In our case, we want to set $p_{target}$ to ";admin=true;". 
+So all we need to do is to align our input into some block and use the described method to inject the target.
+
+We start by detecting the prefix length (we already know it equals 32, but it doesn't have to be...). 
+In AES-CBC mode, a change in the input will only affect its matching block in the output and the following blocks. We use this property to detect the prefix length:
+```python
+def detect_prefix_length(oracle: Oracle, block_size: int) -> int:  
+	# detect how many complete block_size fit into the prefix  
+	full_block_len = 0  
+	c1 = oracle.encode(b'')  
+	c2 = oracle.encode(b'A')  
+	for i in range(0, len(c2), block_size):  
+		if c1[i:i+block_size] != c2[i:i+block_size]:  
+			full_block_len = i  
+			break  
+
+	# detect the prefix length in its final block  
+	block_idx = slice(full_block_len, full_block_len+block_size)  
+	prev_block = c1[block_idx]  
+	pad_len = 0  
+	for i in range(1, block_size+2):  
+		new_block = oracle.encode(b'A'*i)[block_idx]  
+		if new_block == prev_block:  
+			pad_len = i - 1  
+			break  
+		prev_block = new_block  
+
+	# combine the length in blocks and the padding length  
+	prefix_len = full_block_len + block_size - pad_len  
+	return prefix_len
+```
+
+Given the prefix length, we use the described method to create the attack sequence:
+```python
+def generate_attack_sequence(oracle: Oracle, prefix_len: int):  
+	# align our input to new block  
+	if prefix_len % AES_BLOCK_SIZE != 0:  
+		pad_len = AES_BLOCK_SIZE - (prefix_len % AES_BLOCK_SIZE)  
+	else:  
+		pad_len = 0  
+
+	prev_blocks_len = prefix_len + pad_len  
+
+	# encode two blocks of repeating 'A'  
+	known_plaintext = b'B' * pad_len + b'A' * 2 * AES_BLOCK_SIZE  
+	ciphertext = oracle.encode(known_plaintext)  
+
+	# create target block  
+	target = b';admin=true'  
+	target = b'A' * (AES_BLOCK_SIZE - len(target)) + target  
+
+	# modify c_1 to inject [target] into p_2  
+	c1_original = ciphertext[prev_blocks_len: prev_blocks_len + AES_BLOCK_SIZE]  
+	p2_original = b'A' * AES_BLOCK_SIZE  
+	c1_modified = xor_bytes((c1_original, p2_original, target))  
+
+	# build attack sequence  
+	attack_sequence = ciphertext[:prev_blocks_len]  
+	attack_sequence += c1_modified  
+	attack_sequence += ciphertext[prev_blocks_len + AES_BLOCK_SIZE:]  
+
+	return attack_sequence
+```
+
+Now, we can test the **attack_sequence** and check if **admin=true**:
+```python
+oracle = Oracle()  
+prefix_len = detect_prefix_length(oracle, AES_BLOCK_SIZE)  
+print(f'{prefix_len=}')  # prefix_len=32
+attack_sequence = generate_attack_sequence(oracle, prefix_len=prefix_len)  
+is_admin = oracle.parse(attack_sequence)  
+print(f'{is_admin=}')  # is_admin=True
+```

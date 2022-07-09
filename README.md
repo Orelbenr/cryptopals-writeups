@@ -25,3 +25,13 @@ Some of the cryptographic topics covered:
 	7. Challenge 7 - AES in ECB mode
 	8. Challenge 8 - Detect AES in ECB mode
 
+2. [Set 2: Block crypto](Set2_Block_crypto)
+	9. Challenge 9 - Implement PKCS#7 padding
+	10. Challenge 10 - Implement CBC mode
+	11. Challenge 11 - An ECB/CBC detection oracle
+	12. Challenge 12 - Byte-at-a-time ECB decryption (Simple)
+	13. Challenge 13 - ECB cut-and-paste
+	14. Challenge 14 - Byte-at-a-time ECB decryption (Harder)
+	15. Challenge 15 - PKCS#7 padding validation
+	16. Challenge 16 - CBC bitflipping attacks
+
