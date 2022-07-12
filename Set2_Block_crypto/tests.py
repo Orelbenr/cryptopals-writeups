@@ -55,26 +55,3 @@ def test_challenge_14():
     for _ in range(200):
         res = decrypt_ecb()
         assert res == target
-
-
-# AES tests
-def test_cbc():
-    from Utils.AES import aes_cbc_encrypt, aes_cbc_decrypt
-    for i in range(1000):
-        key = get_random_bytes(AES_BLOCK_SIZE)
-        nonce = get_random_bytes(AES_BLOCK_SIZE)
-
-        data = random.randbytes(random.randint(1, 100))
-        my_cipher = aes_cbc_encrypt(data, key, nonce)
-
-        cipher_obj = AES.new(key, AES.MODE_CBC, iv=nonce)
-        target_cipher = cipher_obj.encrypt(pad(data, AES.block_size))
-
-        assert my_cipher == target_cipher
-
-        my_decryption = aes_cbc_decrypt(my_cipher, key, nonce, remove_padding=True)
-        cipher_obj = AES.new(key, AES.MODE_CBC, iv=nonce)
-        target_decryption = unpad(cipher_obj.decrypt(my_cipher), AES_BLOCK_SIZE)
-
-        assert my_decryption == data
-        assert my_decryption == target_decryption

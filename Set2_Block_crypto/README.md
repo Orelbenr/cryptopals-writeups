@@ -36,7 +36,7 @@ print(result == target)
 
 We implement AES CBC encryption as described: each ciphertext block is added to the next plaintext block before the next call to the cipher core.
 ```python
-	def aes_cbc_encrypt(plaintext: bytes, key: bytes, nonce: bytes = bytes(AES_BLOCK_SIZE)) -> bytes:  
+def aes_cbc_encrypt(plaintext: bytes, key: bytes, nonce: bytes = bytes(AES_BLOCK_SIZE)) -> bytes:  
 	# verify input  
 	if len(nonce) != AES_BLOCK_SIZE:  
 		raise ValueError(f"Nonce must be of size {AES_BLOCK_SIZE}")  

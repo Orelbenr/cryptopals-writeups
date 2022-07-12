@@ -2,6 +2,7 @@
 from Crypto.Cipher import AES
 
 from Utils.padding import pkcs7_pad, pkcs7_unpad
+from Utils.bytes_logic import xor_bytes
 
 
 def aes_ecb_encrypt(plaintext: bytes, key: bytes, add_padding=True) -> bytes:
@@ -18,10 +19,6 @@ def aes_ecb_decrypt(ciphertext: bytes, key: bytes, remove_padding=False) -> byte
     if remove_padding:
         plaintext = pkcs7_unpad(plaintext, AES.block_size)
     return plaintext
-
-
-def xor_bytes(b1: bytes, b2: bytes) -> bytes:
-    return bytes([_a ^ _b for _a, _b in zip(b1, b2)])
 
 
 def aes_cbc_encrypt(plaintext: bytes, key: bytes, nonce: bytes = bytes(AES.block_size), add_padding=True) -> bytes:
@@ -44,7 +41,7 @@ def aes_cbc_encrypt(plaintext: bytes, key: bytes, nonce: bytes = bytes(AES.block
     for i in range(0, len(plaintext), AES.block_size):
         # extract block and XOR with last ciphertext block
         extracted_block = plaintext[i:i+AES.block_size]
-        extracted_block = xor_bytes(extracted_block, prev_iv)
+        extracted_block = xor_bytes((extracted_block, prev_iv))
         encrypted_block = cipher_obj.encrypt(extracted_block)
         cipher += encrypted_block
 
@@ -71,7 +68,7 @@ def aes_cbc_decrypt(ciphertext: bytes, key: bytes, nonce: bytes = bytes(AES.bloc
         # extract block, decrypt and XOR with last plaintext block
         extracted_block = ciphertext[i:i+AES.block_size]
         plaintext_block = cipher_obj.decrypt(extracted_block)
-        plaintext_block = xor_bytes(plaintext_block, prev_iv)
+        plaintext_block = xor_bytes((plaintext_block, prev_iv))
         plaintext += plaintext_block
 
         # update prev block
