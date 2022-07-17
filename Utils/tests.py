@@ -28,6 +28,28 @@ class AesTests(unittest.TestCase):
             self.assertEqual(my_decryption, data, 'decryption unsuccessful')
             self.assertEqual(my_decryption, target_decryption, 'decryption differ')
 
+    def test_ctr(self):
+        from Utils.AES import AesCtr
+        for i in range(5000):
+            key = get_random_bytes(AES.block_size)
+            nonce = get_random_bytes(AES.block_size//2)
+            aes_ctr = AesCtr(key=key, nonce=nonce, byteorder='big')
+
+            data = random.randbytes(random.randint(1, 1000))
+            my_cipher = aes_ctr.encrypt(data)
+
+            cipher_obj = AES.new(key, AES.MODE_CTR, nonce=nonce)
+            target_cipher = cipher_obj.encrypt(data)
+
+            self.assertEqual(my_cipher, target_cipher, 'encryption differ')
+
+            cipher_obj = AES.new(key, AES.MODE_CTR, nonce=nonce)
+            my_decryption = aes_ctr.decrypt(my_cipher)
+            target_decryption = cipher_obj.decrypt(my_cipher)
+
+            self.assertEqual(my_decryption, data, 'decryption unsuccessful')
+            self.assertEqual(my_decryption, target_decryption, 'decryption differ')
+
 
 if __name__ == '__main__':
     unittest.main()

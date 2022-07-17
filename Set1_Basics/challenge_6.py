@@ -132,11 +132,8 @@ def eval_key_size(stream: bytes, max_key_size: int) -> int:
     return best_key_size
 
 
-def transpose_blocks(stream: bytes, key_size: int) -> list:
-    block_list = []
-    for shift in range(key_size):
-        block_list.append(stream[shift::key_size])
-
+def transpose_blocks(stream: bytes, key_size: int) -> list[bytes]:
+    block_list = [stream[shift::key_size] for shift in range(key_size)]
     return block_list
 
 

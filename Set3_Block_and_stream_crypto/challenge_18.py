@@ -44,9 +44,63 @@ Daniel Bernstein once quipped to Phil Rogaway that good cryptosystems don't need
 Constructions like CTR are what he was talking about.
 """
 
+import base64
+import math
+import random
+from typing import Literal
+from Crypto.Cipher import AES
+
+from Utils.bytes_logic import xor_bytes
+
+
+class AesCtr:
+    def __init__(self, key: bytes, nonce: bytes = None, byteorder: Literal["little", "big"] = "little"):
+        # verify input
+        if byteorder not in ["big", "little"]:
+            raise ValueError('byteorder must be "big" or "little"')
+
+        if nonce is None:
+            self.nonce = random.randbytes(8)
+        else:
+            self.nonce = nonce
+
+        # init vals
+        self.key = key
+        self.byteorder = byteorder
+        self.cipher_obj = AES.new(self.key, AES.MODE_ECB)
+
+    def generate_key_stream(self, input_len: int) -> bytes:
+        key_stream = bytes()
+        counter = 0
+        for _ in range(math.ceil(input_len / AES.block_size)):
+            # create and encrypt counter block
+            counter_block = self.nonce + counter.to_bytes(AES.block_size // 2, byteorder=self.byteorder)
+            key_stream += self.cipher_obj.encrypt(counter_block)
+
+            # update for next block
+            counter += 1
+
+        # trim and return
+        key_stream = key_stream[:input_len]
+        return key_stream
+
+    def encrypt(self, plaintext: bytes) -> bytes:
+        key_stream = self.generate_key_stream(len(plaintext))
+        ciphertext = xor_bytes((plaintext, key_stream))
+        return ciphertext
+
+    def decrypt(self, ciphertext: bytes) -> bytes:
+        key_stream = self.generate_key_stream(len(ciphertext))
+        plaintext = xor_bytes((ciphertext, key_stream))
+        return plaintext
+
 
 def main():
-    pass
+    ciphertext = base64.b64decode('L77na/nrFsKvynd6HzOoG7GHTLXsTVu9qvY/2syLXzhPweyyMTJULu/6/kXX0KSvoOLSFQ==')
+
+    aes_ctr = AesCtr(b'YELLOW SUBMARINE', nonce=bytes(8), byteorder='little')
+    plaintext = aes_ctr.decrypt(ciphertext)
+    print(plaintext)
 
 
 if __name__ == '__main__':
