@@ -15,6 +15,17 @@ def xor_bytes(input_bytes: tuple[bytes, ...]) -> bytes:
     return xor_int.to_bytes(len(input_bytes[0]), 'big')
 
 
+def bitlist_2_int(bit_list: list[int]) -> int:
+    out = 0
+    for bit in bit_list:
+        out = (out << 1) | bit
+    return out
+
+
+def int_2_bitlist(num: int) -> list[int]:
+    return [1 if digit == '1' else 0 for digit in format(num, '032b')]
+
+
 if __name__ == '__main__':
     res = xor_bytes((bytes([5, 2, 1, 4]), bytes([1, 2, 3, 6])))
     print(res)
