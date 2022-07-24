@@ -35,3 +35,13 @@ Some of the cryptographic topics covered:
 	7. Challenge 15 - PKCS#7 padding validation
 	8. Challenge 16 - CBC bitflipping attacks
 
+3. [Set 3: Block & stream crypto](Set3_Block_and_stream_crypto)
+	1. Challenge 17 - The CBC padding oracle
+	2. Challenge 18 - Implement CTR, the stream cipher mode
+	3. Challenge 19 - Break fixed-nonce CTR mode using substitutions
+	4. Challenge 20 - Break fixed-nonce CTR statistically
+	5. Challenge 21 - Implement the MT19937 Mersenne Twister RNG
+	6. Challenge 22 - Crack an MT19937 seed
+	7. Challenge 23 - Clone an MT19937 RNG from its output
+	8. Challenge 24 - Create the MT19937 stream cipher and break it
+

@@ -25,13 +25,25 @@ class MT19937:
     lower_mask = (1 << r) - 1
     upper_mask = w_bit_mask & ~lower_mask
 
-    def __init__(self, seed: int = 5489):
+    def __init__(self, seed: int = 5489, length: int = None):
         self.MT = self.seed_mt(seed)
         self.index = self.n
+        self.length = length
+
+    def init_from_state(self, state):
+        self.MT = state
+        self.index = self.n
+        return self
 
     def __iter__(self):
         """ Extract a tempered value based on MT[index] """
+        idx = 0
         while True:
+            # stop condition
+            idx += 1
+            if self.length is not None and self.length < idx:
+                break
+
             # calling twist() every n numbers
             if self.index == self.n:
                 self.twist()
@@ -39,8 +51,8 @@ class MT19937:
             # calc next value
             y = self.MT[self.index]
             y = y ^ ((y >> self.u) & self.d)
-            y = y ^ ((y << self.s) and self.b)
-            y = y ^ ((y << self.t) and self.c)
+            y = y ^ ((y << self.s) & self.b)
+            y = y ^ ((y << self.t) & self.c)
             y = y ^ (y >> self.l)
 
             self.index += 1
@@ -60,7 +72,7 @@ class MT19937:
     def twist(self):
         """ Generate the next n values from the series x_i """
         for i in range(self.n):
-            x = (self.MT[i] & self.upper_mask) + (self.MT[(i+1) % self.n] and self.lower_mask)
+            x = (self.MT[i] & self.upper_mask) + (self.MT[(i+1) % self.n] & self.lower_mask)
             xA = x >> 1
             if x % 2 != 0:  # lowest bit of x is 1
                 xA = xA ^ self.a
@@ -70,10 +82,13 @@ class MT19937:
 
 
 def main():
-    rng = iter(MT19937(seed=424512))
-    print(next(rng))
-    print(next(rng))
-    print(next(rng))
+    # rng = iter(MT19937(seed=424512))
+    # print(next(rng))
+    # print(next(rng))
+    # print(next(rng))
+
+    for i in MT19937(seed=129292, length=3):
+        print(i)
 
 
 if __name__ == '__main__':
