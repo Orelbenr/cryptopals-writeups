@@ -555,11 +555,16 @@ Now, as the **attacker** we have access to **encode** which provides us with the
 Let's take a look at the AES-CBC scheme. 
 Remember that $c_m=E(p_m+c_{m-1})$, and imagine we want to force the decryption of $p_m$ into some value of our own choice denoted by $p_{target}$.
 
-We know the original values of $c_m$, $c_{m-1}$, $p_m$.
-And thus if we set:  
+We know the original values of $c_{m}$, $c_{m-1}$, $p_{m}$.
+And thus if we set:
+
 $$\widehat{c_{m-1}}=c_{m-1}+p_{target}+p_m$$ 
-The decryption of $p_m$ will evaluate into:
-$$\widehat{p_m}=\widehat{c_{m-1}}+D(c_m)=\widehat{c_{m-1}}+p_m+c_{m-1}$$ $$=c_{m-1}+p_{target}+p_m+p_m+c_{m-1}=p_{target}$$
+
+The decryption of $p_{m}$ will evaluate into:
+
+$$\widehat{p_m}=\widehat{c_{m-1}}+D(c_m)=\widehat{c_{m-1}}+p_m+c_{m-1}=$$
+
+$$c_{m-1}+p_{target}+p_m+p_m+c_{m-1}=p_{target}$$
 
 In our case, we want to set $p_{target}$ to ";admin=true;". 
 So all we need to do is to align our input into some block and use the described method to inject the target.

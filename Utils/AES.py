@@ -102,15 +102,15 @@ class AesCtr:
         self.byteorder = byteorder
         self.cipher_obj = AES.new(self.key, AES.MODE_ECB)
 
-    def generate_key_stream(self, input_len: int) -> bytes:
+    def generate_key_stream(self, input_len: int, counter_init: int = 0) -> bytes:
         key_stream = bytes()
-        counter = 0
+        counter = counter_init
         for _ in range(math.ceil(input_len / AES.block_size)):
             # create and encrypt counter block
             counter_block = self.nonce + counter.to_bytes(AES.block_size // 2, byteorder=self.byteorder)
             key_stream += self.cipher_obj.encrypt(counter_block)
 
-            # update for next block
+            # update counter
             counter += 1
 
         # trim and return

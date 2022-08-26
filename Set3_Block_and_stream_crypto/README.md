@@ -108,9 +108,9 @@ Finally, we can check if it works:
 ```python
 oracle = Oracle()  
 for _ in range(100):  
-  ciphertext, iv = oracle.encrypt()  
-  plaintext = padding_attack(oracle, ciphertext, iv)  
-  assert plaintext in oracle.data  
+	ciphertext, iv = oracle.encrypt()  
+	plaintext = padding_attack(oracle, ciphertext, iv)  
+	assert plaintext in oracle.data  
   
 print('All tests passed successfully')
 ```
@@ -338,7 +338,8 @@ class MT19937:
 	@classmethod  
 	def seed_mt(cls, seed: int) -> list[int]:  
 		""" Initialize the generator from a seed """  
-		# MT[0] := seed  MT = [seed]  
+		# MT[0] := seed  
+		MT = [seed]  
 		for i in range(1, cls.n):  
 			# MT[i] := lowest w bits of (f * (MT[i-1] xor (MT[i-1] >> (w-2))) + i)  
 			MT.append(cls.w_bit_mask & (cls.f * (MT[i-1] ^ (MT[i-1] >> (cls.w-2))) + i))  

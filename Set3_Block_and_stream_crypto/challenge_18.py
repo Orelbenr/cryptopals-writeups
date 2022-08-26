@@ -71,14 +71,10 @@ class AesCtr:
 
     def generate_key_stream(self, input_len: int) -> bytes:
         key_stream = bytes()
-        counter = 0
-        for _ in range(math.ceil(input_len / AES.block_size)):
+        for counter in range(math.ceil(input_len / AES.block_size)):
             # create and encrypt counter block
             counter_block = self.nonce + counter.to_bytes(AES.block_size // 2, byteorder=self.byteorder)
             key_stream += self.cipher_obj.encrypt(counter_block)
-
-            # update for next block
-            counter += 1
 
         # trim and return
         key_stream = key_stream[:input_len]
