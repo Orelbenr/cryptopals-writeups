@@ -45,3 +45,12 @@ Some of the cryptographic topics covered:
 	7. Challenge 23 - Clone an MT19937 RNG from its output
 	8. Challenge 24 - Create the MT19937 stream cipher and break it
 
+4. [Set 4: Stream crypto and randomness](Set4_Stream_crypto_and_randomness)
+	1. Challenge 25 - Break "random access read/write" AES CTR
+	2. Challenge 26 - CTR bitflipping
+	3. Challenge 27 - Recover the key from CBC with IV=Key
+	4. Challenge 28 - Implement a SHA-1 keyed MAC
+	5. Challenge 29 - Break a SHA-1 keyed MAC using length extension
+	6. Challenge 30 - Break an MD4 keyed MAC using length extension
+	7. Challenge 31 - Implement and break HMAC-SHA1 with an artificial timing leak
+	8. Challenge 32 - Break HMAC-SHA1 with a slightly less artificial timing leak

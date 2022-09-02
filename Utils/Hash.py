@@ -1,6 +1,7 @@
 import struct
+from collections.abc import Callable
 
-from Utils.bytes_logic import circular_left_shit
+from Utils.bytes_logic import circular_left_shit, xor_bytes
 
 
 def SHA1(msg: bytes, h0=0x67452301, h1=0xEFCDAB89, h2=0x98BADCFE,
@@ -157,9 +158,45 @@ class MD4:
         return lbits | rbits
 
 
+class HMAC:
+    @staticmethod
+    def _compute_block_sized_key(key: bytes, hash_func: Callable[[bytes], bytes], block_size: int):
+        # Keys longer than [block_size] are shortened by hashing them
+        if len(key) > block_size:
+            key = hash_func(key)
+
+        # Keys shorter than [block_size] are padded to [block_size] by padding with zeros on the right
+        if len(key) < block_size:
+            return key + bytes(block_size - len(key))
+
+        return key
+
+    @classmethod
+    def _process(cls, key: bytes, msg: bytes, hash_func: Callable[[bytes], bytes], block_size: int):
+        # Compute the block sized key
+        block_sized_key = cls._compute_block_sized_key(key, hash_func, block_size)
+
+        # Outer & Inner padded key
+        o_key_pad = xor_bytes((block_sized_key, bytes([0x5c] * block_size)))
+        i_key_pad = xor_bytes((block_sized_key, bytes([0x36] * block_size)))
+
+        # calc hash
+        return hash_func(o_key_pad + hash_func(i_key_pad + msg))
+
+    @classmethod
+    def sha1(cls, key: bytes, msg: bytes):
+        hash_func = SHA1
+        block_size = 64
+        return cls._process(key=key, msg=msg, hash_func=hash_func, block_size=block_size)
+
+
 if __name__ == '__main__':
     res = SHA1(b"The quick brown fox jumps over the lazy dog")
     print(res.hex() == '2fd4e1c67a2d28fced849ee1bb76e7391b93eb12')
 
     res2 = MD4.process(b"The quick brown fox jumps over the lazy cog")
     print(res2.hex() == 'b86e130ce7028da59e672d56ad0113df')
+
+    res3 = HMAC.sha1(key=b"key", msg=b"The quick brown fox jumps over the lazy dog")
+    print(res3.hex() == 'de7c9b85b8b78aa6bc8a7a36f70a90701c9db4d9')
+

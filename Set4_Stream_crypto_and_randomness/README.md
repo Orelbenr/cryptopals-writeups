@@ -9,9 +9,7 @@
 29. [Challenge 29 - Break a SHA-1 keyed MAC using length extension](#challenge-29---break-a-sha-1-keyed-mac-using-length-extension)
 30. [Challenge 30 - Break an MD4 keyed MAC using length extension](#challenge-30---break-an-md4-keyed-mac-using-length-extension)
 31. [Challenge 31 - Implement and break HMAC-SHA1 with an artificial timing leak](#challenge-31---implement-and-break-hmac-sha1-with-an-artificial-timing-leak)
-
-
-
+32. [Challenge 32 - Break HMAC-SHA1 with a slightly less artificial timing leak](#challenge-32---break-hmac-sha1-with-a-slightly-less-artificial-timing-leak)
 
 
 
@@ -19,7 +17,7 @@
 
 > Challenge: https://cryptopals.com/sets/4/challenges/25
 
-First we load the file and recover the plaintext (challenge 10):
+First, we load the file and recover the plaintext (challenge 10):
 ```python
 # load cipher and decode base64 to bytes  
 with open('25.txt', 'r') as fh:  
@@ -29,18 +27,18 @@ key = b"YELLOW SUBMARINE"
 plaintext = aes_ecb_decrypt(ciphertext=ciphertext, key=key, remove_padding=True)
 ```
 
-Now we implement the requested **edit** function which is able to modify the plaintext and return the result:
+Now we implement the requested **edit** function which can modify the plaintext and return the result:
 ```python
 def edit(self, ciphertext: bytes, offset: int, new_text: bytes):  
-	key_stream = self.ctr_obj.generate_key_stream(len(ciphertext))  
-	key_stream = key_stream[offset: offset + len(new_text)]  
+    key_stream = self.ctr_obj.generate_key_stream(len(ciphertext))  
+    key_stream = key_stream[offset: offset + len(new_text)]  
 
-	new_cipher = xor_bytes((key_stream, new_text))  
-	out = ciphertext[:offset] + new_cipher + ciphertext[offset+len(new_cipher):]  
-	return out
+    new_cipher = xor_bytes((key_stream, new_text))  
+    out = ciphertext[:offset] + new_cipher + ciphertext[offset+len(new_cipher):]  
+    return out
 ```
 
-In order to recover the original plaintext we can just use the **edit** function with the *ciphertext* as *new_text*.
+To recover the original plaintext we can just use the **edit** function with the *ciphertext* as *new_text*.
 This way, the new encryption will result in:
 $$ciphertext \oplus keystream =$$
 $$plaintext \oplus keystream \oplus keystream = $$
@@ -92,9 +90,9 @@ $$ c_{1} \oplus keystream \oplus c_{2} \oplus keystream = $$
 
 $$ c_{1} \oplus c_{2} = p_{target} $$
 
-As  desired...
+As desired...
 
-We start by detecting the prefix length. Because the cipher is a stream cipher, we just look for the index where the encryption of different plaintexts differ:
+We start by detecting the prefix length. Because the cipher is a stream cipher, we just look for the index where the encryption of different plaintexts differs:
 ```python
 def detect_prefix_length(oracle: Oracle) -> int:
     c1 = oracle.encode(b'A' * 5)
@@ -231,7 +229,7 @@ print(plaintext)
 ```
 
 
-## Challenge 28 - Implement a SHA-1 keyed MAC
+## Challenge 28 - Implement an SHA-1 keyed MAC
 
 > Challenge: https://cryptopals.com/sets/4/challenges/28
 
@@ -338,7 +336,7 @@ print(digestion)  # b'\x0c\xddB\x045U\xf5GZ\xaab\x15\xac}\xa0\xbfbTZb'
 
 We start by writing a function that computes the MD padding of an arbitrary message. 
 
-The function logic is the same as the padding in SHA-1, except that it eccept the message length as input instead of the message itself:
+The function logic is the same as the padding in SHA-1, except that it accept the message length as input instead of the message itself:
 ```python
 def md_padding(msg_len: int) -> bytes:
     # message length in bits
@@ -371,7 +369,7 @@ Now, we can forge the MAC according to `new_msg` of our choice.
 
     `final_msg = org_msg + padding + new_msg`
 
-- And finally we generate the new MAC using the SHA-1 state and the final message length:
+- And finally, we generate the new MAC using the SHA-1 state and the final message length:
 
     `fake_len = len(final_msg) + key_len`
     
@@ -388,7 +386,7 @@ def attack(org_msg: bytes, org_mac: bytes, new_msg: bytes, key_len: int):
     padding = md_padding(msg_len)
     final_msg = org_msg + padding + new_msg
 
-    # build new hash
+    # build the new hash
     fake_len = len(final_msg) + key_len
     forged_mac = SHA1(new_msg, h0=h0, h1=h1, h2=h2, h3=h3, h4=h4, force_len=fake_len)
 
@@ -427,7 +425,7 @@ print(forged_mac == new_mac)  # True
 
 > Challenge: https://cryptopals.com/sets/4/challenges/30
 
-We take MD4 base implementation from [here](https://gist.github.com/kangtastic/c3349fc4f9d659ee362b12d7d8c639b6) and modify to our needs:
+We take MD4 base implementation from [here](https://gist.github.com/kangtastic/c3349fc4f9d659ee362b12d7d8c639b6) and modify it to our needs:
 
 ```python
 class MD4:
@@ -513,7 +511,7 @@ def md4_mac(msg: bytes, key: bytes):
     return MD4.process(key + msg)
 ```
 
-Then, we create the **atack** function:
+Then, we create the **attack** function:
 ```python
 def attack(org_msg: bytes, org_mac: bytes, new_msg: bytes, key_len: int):
     # unpack sha1 state
@@ -556,3 +554,168 @@ print(forged_mac == new_mac)  # True
 ## Challenge 31 - Implement and break HMAC-SHA1 with an artificial timing leak
 
 > Challenge: https://cryptopals.com/sets/4/challenges/31
+
+We start by implementing HMAC-SHA1:
+```python
+class HMAC:
+    @staticmethod
+    def _compute_block_sized_key(key: bytes, hash_func: Callable[[bytes], bytes], block_size: int):
+        # Keys longer than [block_size] are shortened by hashing them
+        if len(key) > block_size:
+            key = hash_func(key)
+
+        # Keys shorter than [block_size] are padded to [block_size] by padding with zeros on the right
+        if len(key) < block_size:
+            return key + bytes(block_size - len(key))
+
+        return key
+
+    @classmethod
+    def _process(cls, key: bytes, msg: bytes, hash_func: Callable[[bytes], bytes], block_size: int):
+        # Compute the block sized key
+        block_sized_key = cls._compute_block_sized_key(key, hash_func, block_size)
+
+        # Outer & Inner padded key
+        o_key_pad = xor_bytes((block_sized_key, bytes([0x5c] * block_size)))
+        i_key_pad = xor_bytes((block_sized_key, bytes([0x36] * block_size)))
+
+        # calc hash
+        return hash_func(o_key_pad + hash_func(i_key_pad + msg))
+
+    @classmethod
+    def sha1(cls, key: bytes, msg: bytes):
+        hash_func = SHA1
+        block_size = 64
+        return cls._process(key=key, msg=msg, hash_func=hash_func, block_size=block_size)
+```
+
+Now, we create a simple web server that takes a *file* argument and a *signature* argument. 
+
+The server verifies the *signature* on *file* using **insecure_compare** function which compares one byte at a time and returns when the comparison fails.
+
+The server implementation:
+```python
+app = Flask(__name__)
+KEY = get_random_bytes(16)
+
+
+@app.route('/test')
+def validate_signature():
+    # parse url
+    file = request.args.get('file')
+    signature = request.args.get('signature')
+
+    # evaluate HMAC-SHA1
+    mac = HMAC.sha1(key=KEY, msg=file.encode()).hex()
+
+    # compare to the signature
+    flag = insecure_compare(mac, signature, sleep_time=50e-3)
+
+    if flag:
+        return 'signature verified', 200
+    else:
+        return 'signature does not match', 500
+
+
+if __name__ == '__main__':
+    app.run(port=9000)
+```
+
+And the **insecure_compare** implementation:
+```python
+def insecure_compare(mac1: str, mac2: str, sleep_time: float) -> bool:
+    for i in range(min(len(mac1), len(mac2))):
+        if mac1[i] != mac2[i]:
+            return False
+        time.sleep(sleep_time)
+
+    if len(mac1) != len(mac2):
+        return False
+
+    return True
+```
+
+To evaluate the MAC we brute-force each digit at a time.
+
+The MAC consists of 40 digits from the range '0'-'f' (16 possibilities). 
+
+We start with a function that given a MAC, verifies its correctness and measures the comparison time. The function repeats the measurment [num_repetitions] times and average the result:
+```python
+def try_mac(self, mac: str) -> (bool, float):
+    # defining a params dict for the parameters to be sent to the API
+    params = {'file': self.file.decode(), 'signature': mac}
+
+    # mean the results over number of repetitions
+    time_list = []
+    for _ in range(self.num_repetitions):
+        # sending get request
+        start = time.time()
+        status_code = requests.get(url=self.url, params=params).status_code
+        end = time.time()
+        time_list.append(end - start)
+
+    flag = True if status_code == 200 else False
+    elapsed_time = sum(time_list) / len(time_list)
+
+    return flag, elapsed_time
+```
+
+Now, we brute-force all 40 digits of the MAC.
+
+To speed things up, we use **parallel pool** on the different 16 possible values and pick the best one:
+```python
+def attack(self):
+    # initialize empty mac
+    mac = ''
+    pool = multiprocessing.Pool(20)
+
+    for _ in tqdm(range(self.mac_len)):
+        # test all 2**4 possibilities
+        tests = [mac + format(num, '1x') for num in range(2**4)]
+        res = pool.map(self.try_mac, tests)
+
+        # check for success or best result
+        best_time = 0
+        best_num = 0
+        for num in range(len(res)):
+            if res[num][0]:
+                return tests[num]
+            if res[num][1] > best_time:
+                best_time = res[num][1]
+                best_num = num
+
+        # update best_num
+        mac += format(best_num, '1x')
+        print(f'mac = {mac}')
+
+    raise Exception('attack failed')
+```
+
+Finally, we can check if it works:
+```python
+url = 'http://localhost:9000/test?'
+file = b'The quick brown fox jumps over the lazy dog'
+
+# find mac
+mac = Attack(file=file, url=url, num_repetitions=5).attack()
+print(f'Recovered MAC = {mac}')  # Recovered MAC = 77d137731a06b6693fb699b79b269fe6d1cb51fa
+
+# verify result
+params = {'file': file.decode(), 'signature': mac}
+response = requests.get(url=url, params=params)
+print(f'{response.status_code=}')  # response.status_code=200
+print(f'{response.content=}')  # response.content=b'signature verified'
+```
+
+
+## Challenge 32 - Break HMAC-SHA1 with a slightly less artificial timing leak
+
+> Challenge: https://cryptopals.com/sets/4/challenges/32
+
+We set the sleep time to 5[ms].
+
+`flag = insecure_compare(mac, signature, sleep_time=5e-3)`
+
+The script from *challenge 31* fails to decode the MAC.
+
+For better accuracy in small delay times, we can increase the [num_repetitions] parameter.
