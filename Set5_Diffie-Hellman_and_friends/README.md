@@ -704,11 +704,11 @@ Now, we need to perform offline dictionary attack using MITM on the client.
 
 We, as the MITM can choose the the following values as our own choice: b, B, u, and salt.
 
-If we set $ B = g $, the client will calc $Sc$ as follows:
+If we set $ B = g $ , the client will calc $ S_c $ as follows:
 
 $$ Sc = B ^ {a + ux} = g ^ {a + ux} = g^{a} \cdot g^{ux} = A \cdot g^{ux} $$ 
 
-As the MITM we know all the values in the equation but $x$, which means we can write a function: 
+As the MITM we know all the values in the equation but $ x $ , which means we can write a function: 
 
 $$ F(password) = HMAC-SHA256(K, salt) = $$
 
