@@ -1,4 +1,6 @@
+import hmac
 import struct
+import hashlib
 from collections.abc import Callable
 
 from Utils.bytes_logic import circular_left_shit, xor_bytes
@@ -189,6 +191,12 @@ class HMAC:
         block_size = 64
         return cls._process(key=key, msg=msg, hash_func=hash_func, block_size=block_size)
 
+    @classmethod
+    def sha256(cls, key: bytes, msg: bytes):
+        hash_func = lambda x: hashlib.sha256(x).digest()
+        block_size = 64
+        return cls._process(key=key, msg=msg, hash_func=hash_func, block_size=block_size)
+
 
 if __name__ == '__main__':
     res = SHA1(b"The quick brown fox jumps over the lazy dog")
@@ -199,4 +207,7 @@ if __name__ == '__main__':
 
     res3 = HMAC.sha1(key=b"key", msg=b"The quick brown fox jumps over the lazy dog")
     print(res3.hex() == 'de7c9b85b8b78aa6bc8a7a36f70a90701c9db4d9')
+
+    res4 = HMAC.sha256(key=b"key", msg=b"The quick brown fox jumps over the lazy dog")
+    print(res4 == hmac.digest(key=b"key", msg=b"The quick brown fox jumps over the lazy dog", digest='sha256'))
 
