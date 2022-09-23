@@ -32,18 +32,6 @@ def circular_left_shit(num: int, shift: int, bit_size: int = 32):
     return shifted | reminder
 
 
-def power_mod(b, e, m):
-    res = 1
-    while e > 0:
-        b, e, res = (
-            b * b % m,
-            e >> 2,
-            b * res % m if e % 2 else res
-        )
-
-    return res
-
-
 if __name__ == '__main__':
     res = xor_bytes((bytes([5, 2, 1, 4]), bytes([1, 2, 3, 6])))
     print(res)

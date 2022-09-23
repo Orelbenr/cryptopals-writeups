@@ -9,7 +9,7 @@
 37. [Challenge 37 - Break SRP with a zero key](#challenge-37---break-srp-with-a-zero-key)
 38. [Challenge 38 - Offline dictionary attack on simplified SRP](#challenge-38---offline-dictionary-attack-on-simplified-srp)
 39. [Challenge 39 - Implement RSA](#challenge-39---implement-rsa)
-
+40. [Challenge 40 - Implement an E=3 RSA Broadcast attack](#challenge-40---implement-an-e3-rsa-broadcast-attack)
 
 
 
@@ -25,13 +25,13 @@ The Diffie-Hellman constants are:
 p, g = 37, 5
 ```
 
-Each user generate a private key:
+Each user generates a private key:
 ```python
 a = random.randint(1, 37)
 b = random.randint(1, 37)
 ```
 
-And calcualte the public key:
+And calculate the public key:
 ```python
 A = (g ** a) % p
 B = (g ** b) % p
@@ -117,7 +117,7 @@ As it turns out, both parties will agree on the same key, and the MITM will be a
 We'll use **socket programing** for the server and client as described [here](https://realpython.com/python-sockets/).
 
 We start with the "echo" bot. 
-The server manage DH handshake for new connections, then continue to "echo" the message:
+The server manage DH handshake for new connections, then continues to "echo" the message:
 ```python
 class EchoHandler(socketserver.BaseRequestHandler):
     def generate_session(self) -> bytes:
@@ -184,7 +184,7 @@ if __name__ == "__main__":
 
 Next, we implement the client.
 
-The client generate DH session when created, and procceed to send secure messages to the server.
+The client generates DH session when created, and proceed to send secure messages to the server.
 ```python
 class Client:
     p = int('ffffffffffffffffc90fdaa22168c234c4c6628b80d'
@@ -248,7 +248,7 @@ class Client:
         print(f'{echo_msg=}')
 ```
 
-Lastly, we implement the MITM which modify the traffic as described:
+Lastly, we implement the MITM which modifies the traffic as described:
 ```python
 class MitmHandler(socketserver.BaseRequestHandler):
     def handle(self):
@@ -273,7 +273,7 @@ class MitmHandler(socketserver.BaseRequestHandler):
             modified_resp = json.dumps({'B': p}).encode('utf-8')
             self.request.sendall(modified_resp)
 
-            # pass Alice message to Bob
+            # pass Alice's message to Bob
             alice_msg = self.request.recv(BUFFER_SIZE)
             bob_socket.sendall(alice_msg)
 
@@ -288,7 +288,7 @@ class MitmHandler(socketserver.BaseRequestHandler):
         session_key = SHA1(s_bytes)[:16]
         print(f'{session_key=}')
 
-        # parse and decrypt Bob and Alice Messages
+        # parse and decrypt Bob and Alice's Messages
         alice_code = alice_msg[:-AES_BLOCK_SIZE]
         alice_nonce = alice_msg[-AES_BLOCK_SIZE:]
         alice_msg_decrypted = aes_cbc_decrypt(alice_code, session_key, alice_nonce, remove_padding=True)
@@ -326,7 +326,7 @@ bob_msg_decrypted=b'cryptopals'
 
 We can see that all the parties agree on the same session key.
 
-Moreover, the MITM is able to decrypt all the traffic.
+Moreover, the MITM can decrypt all the traffic.
 
 
 
@@ -362,7 +362,7 @@ $$ s = A ^ {b} \mod p = B ^ {a} \mod p = (-1) ^ {a \cdot b} \mod p $$
 
 $$ s = 1 / p-1 $$
 
-Validate with real key exchange:
+Validate with the real key exchange:
 ```python
 # possible g and s
 g_list = [1, p, p-1]
@@ -450,7 +450,7 @@ print(f"{S_s = }\n{K_s = }")
 
 assert K_s == K_c
 
-# SERVER verify CLIENT:
+# SERVER verifies CLIENT:
 client_verification = hmac.digest(key=long_to_bytes(K_c), msg=long_to_bytes(salt), digest='sha256')
 if hmac.digest(key=long_to_bytes(K_s), msg=long_to_bytes(salt), digest='sha256') != client_verification:
     print('Client verification failed')
@@ -462,7 +462,7 @@ if hmac.digest(key=long_to_bytes(K_s), msg=long_to_bytes(salt), digest='sha256')
 
 > Challenge: https://cryptopals.com/sets/5/challenges/37
 
-We create the SRP server like we did in challenge 34:
+We create the SRP server as we did in challenge 34:
 ```python
 class SRPHandler(socketserver.BaseRequestHandler):
     def srp_handshake(self) -> bool:
@@ -480,7 +480,7 @@ class SRPHandler(socketserver.BaseRequestHandler):
             self.request.sendall(b'Illegal Message!')
             raise ConnectionError('Invalid request')
 
-        # verify I in server list
+        # verify I in the server list
         if I != I_GLOBAL:
             raise ConnectionError('Wrong I!')
 
@@ -529,14 +529,14 @@ class SRPHandler(socketserver.BaseRequestHandler):
             print('Password is not correct!')
 ```
 
-Now, if the client send $0$ as its $A$ value, the server will calcualte $S$ as:
+Now, if the client sends $0$ as its $A$ value, the server will calculate $S$ as:
 
 $$ S = (A \cdot v^{u} \mod N) ^ {b} \mod N =  (0 \cdot v^{u} \mod N) ^ {b} \mod N = 0 $$
 
 Let's see it in action:
 ```python
 def attack_1() -> bool:
-    """ Log in without password using 0 as the A value """
+    """ Log in without a password using 0 as the A value """
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((HOST, PORT))
 
@@ -590,11 +590,11 @@ The server output:
 # User authenticated.
 ```
 
-Likewise, if the client send $k \cdot N$ as its $A$ value (k is integer), the server will calcualte $S$ as:
+Likewise, if the client sends $k \cdot N$ as its $A$ value (k is an integer), the server will calculate $S$ as:
 
 $$ S = (A \cdot v^{u} \mod N) ^ {b} \mod N =  (kN \cdot v^{u} \mod N) ^ {b} \mod N = 0 $$
 
-The server evaluate $S$ like in the previus attack, and the client can exploit it to gain access.
+The server evaluates $S$ like in the previous attack, and the client can exploit it to gain access.
 
 
 
@@ -609,7 +609,7 @@ The client will calculte $S$ as:
 
 $$ Sc = B ^ {a + ux} = g ^ {b \cdot (a + ux)} $$
 
-The server will calculte $S$ as:
+The server will calculate $S$ as:
 
 $$ Ss = (A \cdot v ^ {u}) ^ {b} = (g^{a} \cdot g ^ {ux}) ^ {b} = g ^ {b \cdot (a + ux)} $$
 
@@ -700,9 +700,9 @@ def simplified_srp_client() -> bool:
             return False
 ```
 
-Now, we need to perform offline dictionary attack using MITM on the client.
+Now, we need to perform an offline dictionary attack using MITM on the client.
 
-We, as the MITM can choose the the following values as our own choice: b, B, u, and salt.
+We, as the MITM can choose the following values as our own choice: b, B, u, and salt.
 
 If we set $B = g$ , the client will calc $S_c$ as follows:
 
@@ -771,7 +771,7 @@ def simplified_srp_mitm() -> str:
             return password
 ```
 
-In this example we limit the search to digits only, but it can be expanded at a cost of computational time.
+In this example, we limit the search to digits only, but it can be expanded at a cost of computational time.
 ```python
 Connected by ('127.0.0.1', 64490)
  21%|██        | 4/19 [01:11<04:29, 17.94s/it]
@@ -784,3 +784,150 @@ recovered_password='54321'
 
 > Challenge: https://cryptopals.com/sets/5/challenges/39
 
+Before we implement RSA, we need to implement [Extended Euclidean algorithm](https://en.wikipedia.org/wiki/Extended_Euclidean_algorithm) and [Modular multiplicative inverse](https://en.wikipedia.org/wiki/Modular_multiplicative_inverse#Extended_Euclidean_algorithm):
+
+```python
+def extended_gcd(a: int, b: int) -> tuple:
+    """
+    Extended Euclidean algorithm
+    :return: ( 'gcd' - the resulting gcd,
+               'coeffs' - Bézout coefficients )
+    """
+    old_r, r = a, b
+    old_s, s = 1, 0
+    old_t, t = 0, 1
+
+    while r != 0:
+        quotient = old_r // r
+        old_r, r = r, old_r - quotient * r
+        old_s, s = s, old_s - quotient * s
+        old_t, t = t, old_t - quotient * t
+
+    return old_r, (old_s, old_t)
+
+
+def invmod(a: int, m: int):
+    """
+    Modular multiplicative inverse
+    ax = 1 (mod m)
+    :return: integer x such that the product ax is congruent to 1 with respect to the modulus m
+    """
+    gcd, coeffs = extended_gcd(a, m)
+    if gcd != 1:
+        raise ValueError(f'The modular multiplicative inverse of {a} (mod {m}) does not exist.')
+
+    return coeffs[0] % m
+```
+
+Now, we can implement RSA:
+```python
+class RSA:
+    def __init__(self, key_len: int = 100):
+        # key gen
+        while True:
+            # repeat until we find et which is co-prime to e
+            try:
+                # Generate 2 random primes
+                p, q = getPrime(key_len), getPrime(key_len)
+
+                # RSA math is modulo n
+                n = p * q
+
+                # calc the "totient"
+                et = (p - 1) * (q - 1)
+                e = 3
+
+                # calc private key
+                d = invmod(e, et)
+                break
+
+            except ValueError:
+                continue
+
+        # keys summery
+        self.n = n
+        self.d = d
+        self.e = e
+
+    def encrypt(self, m: bytes) -> int:
+        m = self.bytes_to_num(m)
+        c = pow(m, self.e, self.n)
+        return c
+
+    def decrypt(self, c: int) -> bytes:
+        m = pow(c, self.d, self.n)
+        m = self.num_to_bytes(m)
+        return m
+
+    @staticmethod
+    def bytes_to_num(seq: bytes) -> int:
+        return int(seq.hex(), 16)
+
+    @staticmethod
+    def num_to_bytes(seq: int) -> bytes:
+        hex_rep = hex(seq)[2:]
+        hex_rep = '0'*(len(hex_rep) % 2) + hex_rep
+        return bytes.fromhex(hex_rep)
+```
+
+And test the encryption:
+```python
+rsa_obj = RSA(key_len=1024)
+m = b'RSA implementation'
+c = rsa_obj.encrypt(m)
+print(f'{c=}')
+# c=368838979837580040034750782040652848693320270063517380807905592939901013501004599935078919228778955990115633395900937595353678648
+
+m_rec = rsa_obj.decrypt(c)
+print(f'{m_rec=}')
+# m_rec=b'RSA implementation'
+```
+
+
+
+## Challenge 40 - Implement an E=3 RSA Broadcast attack
+
+> Challenge: https://cryptopals.com/sets/5/challenges/40
+
+We have the following set of equations:
+
+$$ c_{0} = m^{e} \mod n_{0} $$
+
+$$ c_{1} = m^{e} \mod n_{1} $$
+
+$$ c_{2} = m^{e} \mod n_{2} $$
+
+Therefore, we can use the [Chinese remainder theorem](https://en.wikipedia.org/wiki/Chinese_remainder_theorem), and determine the value of $m^{e}$:
+
+$$ m^{3} = (c_{0} * (n_{0} * n_{1}) * invmod(n_{0} * n_{1}, n_{2}) + $$
+
+$$ c_{1} * (n_{0} * n_{2}) * invmod(n_{0} * n_{2}, n_{1}) + $$
+
+$$ c_{2} * (n_{0} * n_{1}) * invmod(n_{0} * n_{1}, n_{2}) ) * (n_{0} * n_{1} * n_{2}) $$
+
+
+To retrieve $m$ we can just cube root the result:
+```python
+# get encryption of m under 3 different keys
+rsa_0 = RSA(key_len=1024)
+rsa_1 = RSA(key_len=1024)
+rsa_2 = RSA(key_len=1024)
+
+m = b'CRT is FUN!!!'
+c0, n0 = rsa_0.encrypt(m), rsa_0.n
+c1, n1 = rsa_1.encrypt(m), rsa_1.n
+c2, n2 = rsa_2.encrypt(m), rsa_2.n
+
+# use CRT to determine m ^ 3
+m_s_0, m_s_1, m_s_2 = n1 * n2, n0 * n2, n0 * n1
+m3 = (c0 * m_s_0 * invmod(m_s_0, n0) +
+        c1 * m_s_1 * invmod(m_s_1, n1) +
+        c2 * m_s_2 * invmod(m_s_2, n2)) % (n0 * n1 * n2)
+
+m_rec = invpow(m3, 3)
+
+# convert num to bytes
+m_rec = RSA.num_to_bytes(m_rec)
+print(m)  # b'CRT is FUN!!!'
+print(m_rec)  # b'CRT is FUN!!!'
+```

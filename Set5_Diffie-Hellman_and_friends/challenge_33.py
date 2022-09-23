@@ -44,7 +44,7 @@ You can find modexp routines on Rosetta Code for most languages.
 
 import random
 
-from Utils.bytes_logic import power_mod
+from Utils.number import power_mod
 
 
 def main():

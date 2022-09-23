@@ -1,7 +1,7 @@
 
 # cryptopals-writeups
 
-My writeups and python solutions to the challenges of https://cryptopals.com/.
+My writeups and Python solutions to the challenges of https://cryptopals.com/.
 
 The **Matasano crypto challenges** (cryptopals) take the form of practical attacks against cryptographic vulnerabilities. 
 
@@ -54,3 +54,14 @@ Some of the cryptographic topics covered:
 	6. Challenge 30 - Break an MD4 keyed MAC using length extension
 	7. Challenge 31 - Implement and break HMAC-SHA1 with an artificial timing leak
 	8. Challenge 32 - Break HMAC-SHA1 with a slightly less artificial timing leak
+
+5. [Set 5: Diffie-Hellman and friends](Set5_Diffie-Hellman_and_friends)
+	1. Challenge 33 - Implement Diffie-Hellman
+	2. Challenge 34 - Implement a MITM key-fixing attack on Diffie-Hellman with parameter injection
+	3. Challenge 35 - Implement DH with negotiated groups, and break with malicious "g" parameters
+	4. Challenge 36 - Implement Secure Remote Password (SRP)
+	5. Challenge 37 - Break SRP with a zero key
+	6. Challenge 38 - Offline dictionary attack on simplified SRP
+	7. Challenge 39 - Implement RSA
+	8. Challenge 40 - Implement an E=3 RSA Broadcast attack
+
