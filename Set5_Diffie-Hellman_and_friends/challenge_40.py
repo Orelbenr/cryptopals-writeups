@@ -36,7 +36,7 @@ just take the raw accumulated result and cube-root it.
 """
 
 from challenge_39 import RSA
-from Utils.number import invmod, invpow
+from Utils.number import invmod, invpow_integer
 
 
 def main():
@@ -56,7 +56,7 @@ def main():
           c1 * m_s_1 * invmod(m_s_1, n1) +
           c2 * m_s_2 * invmod(m_s_2, n2)) % (n0 * n1 * n2)
 
-    m_rec = invpow(m3, 3)
+    m_rec = invpow_integer(m3, 3)
 
     # convert num to bytes
     m_rec = RSA.num_to_bytes(m_rec)

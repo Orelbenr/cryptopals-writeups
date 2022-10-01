@@ -47,7 +47,7 @@ def invmod(a: int, m: int):
     return coeffs[0] % m
 
 
-def invpow(x, n):
+def invpow_integer(x, n):
     """
     Finds the integer component of the n'th root of x,
     an integer such that y ** n <= x < (y + 1) ** n.
@@ -69,11 +69,11 @@ def invpow(x, n):
 
 
 if __name__ == '__main__':
-    gcd, coeffs = extended_gcd(240, 46)
-    print(gcd, coeffs)
+    # gcd, coeffs = extended_gcd(240, 46)
+    # print(gcd, coeffs)
+    #
+    # inv = invmod(17, 3120)
+    # print(inv)
 
-    inv = invmod(17, 3120)
-    print(inv)
-
-    res = invpow(5**3, 3)
+    res = invpow_integer(65, 3)
     print(res)
