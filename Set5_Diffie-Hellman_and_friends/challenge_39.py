@@ -33,7 +33,7 @@ to turn it into a number. The math cares not how stupidly you feed it strings.
 
 from Crypto.Util.number import getPrime
 
-from Utils.number import invmod
+from Utils.Number import invmod
 
 
 class RSA:

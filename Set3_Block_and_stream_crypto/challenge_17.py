@@ -55,7 +55,7 @@ from Crypto.Random import get_random_bytes
 
 from Utils.AES import aes_cbc_decrypt, aes_cbc_encrypt
 from Utils.bytes_logic import xor_bytes
-from Utils.padding import pkcs7_unpad
+from Utils.Padding import pkcs7_unpad
 
 # globals
 AES_BLOCK_SIZE = 16

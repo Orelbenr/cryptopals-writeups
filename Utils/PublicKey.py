@@ -1,7 +1,7 @@
 import math
 from Crypto.Util.number import getPrime
 
-from Utils.number import invmod
+from Utils.Number import invmod
 
 
 class RSA:

@@ -36,7 +36,7 @@ just take the raw accumulated result and cube-root it.
 """
 
 from challenge_39 import RSA
-from Utils.number import invmod, invpow_integer
+from Utils.Number import invmod, invpow_integer
 
 
 def main():

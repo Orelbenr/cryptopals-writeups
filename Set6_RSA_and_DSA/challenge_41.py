@@ -49,7 +49,7 @@ from hashlib import sha256
 from Crypto.Util.number import long_to_bytes
 
 from Utils.PublicKey import RSA
-from Utils.number import invmod
+from Utils.Number import invmod
 
 
 class Server:

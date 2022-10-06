@@ -52,7 +52,7 @@ import hashlib
 import math
 
 from Utils.PublicKey import RSA
-from Utils.number import invpow_integer
+from Utils.Number import invpow_integer
 
 
 class RSA_SIG_PKCS1:
