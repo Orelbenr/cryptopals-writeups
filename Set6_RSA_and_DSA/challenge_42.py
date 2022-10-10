@@ -57,14 +57,15 @@ from Utils.Number import invpow_integer
 
 class RSA_SIG_PKCS1:
     """
-    Implementation of RSA.
+    Implementation of RSA Signature.
     Based on the standard PKCS #1 Version 1.5
+    https://www.rfc-editor.org/rfc/rfc2313
     Using MD5 digest.
     """
     ASN1_MD5 = b'\x30\x20\x30\x0c\x06\x08\x2a\x86\x48\x86\xf7\x0d\x02\x05\x05\x00\x04\x10'
 
     def __init__(self):
-        self.rsa_obj = RSA()
+        self.rsa_obj = RSA(key_len=1024, squeeze_output=False)
 
     def sign(self, msg: bytes) -> int:
         # digest the message
@@ -81,13 +82,13 @@ class RSA_SIG_PKCS1:
         assert len(msg_encoded) == self.rsa_obj.k
 
         # convert to int and sign
-        sig = self.rsa_obj.sign(msg_encoded)
+        sig = self.rsa_obj.decrypt(msg_encoded, input_bytes=True, output_bytes=False)
 
         return sig
 
     def verify(self, msg: bytes, sig: int) -> bool:
         # decrypt sig and convert to bytes
-        sig = self.rsa_obj.verify_sign(sig)
+        sig = self.rsa_obj.encrypt(sig, input_bytes=False, output_bytes=True)
 
         # find the signature  marker
         if sig[0:2] != b'\x00\x01':

@@ -7,7 +7,8 @@
 44. [Challenge 44 - DSA nonce recovery from repeated nonce](#challenge-44---dsa-nonce-recovery-from-repeated-nonce)
 45. [Challenge 45 - DSA parameter tampering](#challenge-45---dsa-parameter-tampering)
 46. [Challenge 46 - RSA parity oracle](#challenge-46---rsa-parity-oracle)
-
+47. [Challenge 47 - Bleichenbacher's PKCS 1.5 Padding Oracle (Simple Case)](#challenge-47---bleichenbachers-pkcs-15-padding-oracle-simple-case)
+48. [Challenge 48 - Bleichenbacher's PKCS 1.5 Padding Oracle (Complete Case)](#challenge-48---bleichenbachers-pkcs-15-padding-oracle-complete-case)
 
 
 
@@ -16,7 +17,7 @@
 
 > Challenge: https://cryptopals.com/sets/6/challenges/41
 
-In this challenge we have a server that is able to decrypt a message only on it's first arrival.
+In this challenge, we have a server that can decrypt a message only on its first arrival.
 
 We, as the attacker, want to find a way to decrypt a message that has already been decrypted by the server. Our attack is based on the following property:
 
@@ -179,15 +180,15 @@ class RSA_SIG_PKCS1:
 
 Note that the verifier isn't checking all the padding!
 
-Consequently, there is the possibility that instead of hundreds of ffh bytes, we only have a few, which means there could be lot of possible numbers that could produce a valid-looking signature.
+Consequently, there is the possibility that instead of hundreds of ffh bytes, we only have a few, which means there could be a lot of possible numbers that could produce a valid-looking signature.
 
-So, in order to forge a signature for a message m, we need to find a number that when cubed:
+So, to forge a signature for a message m, we need to find a number that when cubed:
 - doesn't wrap the modulus (thus bypassing the key entirely)
-- produces a block that start with "00h 01h ffh ... 00h ASN.1 HASH".
+- produces a block that starts with "00h 01h ffh ... 00h ASN.1 HASH".
 
-One possible approche for finding such a number: 
+One possible approach for finding such a number: 
 
-Formating the message block we want to forge, leaving sufficient trailing zeros at the end to fill with garbage, then taking the cube-root of that block (The cube root is implemented using binary search for large integers):
+Formating the message block we want to forge, leaving sufficient trailing zeros at the end to fill with garbage, then taking the cube root of that block (The cube root is implemented using binary search for large integers):
 
 ```python
 def forge_sig(msg: bytes, sig_len: int):
@@ -297,7 +298,7 @@ class DSA:
 
 In this challenge, we have the message and the signature, and we need to determine the private key.
 
-The "bug" in the used DSA implementation is that *k* is chosen from the range [0, 2^16]. The small space of *k* values allow us to brute-force the result.
+The "bug" in the used DSA implementation is that *k* is chosen from the range [0, 2^16]. The small space of *k* values allows us to brute-force the result.
 
 We start by recovering the private key *x* given the subkey *k*:
 ```python
@@ -349,8 +350,7 @@ assert s_est == s
 
 # check for matching signatures
 x_fingerprint = DSA.H(hex(x)[2:].encode())
-print(x_fingerprint == int('0954edd5e0afe5542a4adf012611a91912a3ec16', 16))
-# True
+print(x_fingerprint == int('0954edd5e0afe5542a4adf012611a91912a3ec16', 16))  # True
 ```
 
 
@@ -361,7 +361,7 @@ print(x_fingerprint == int('0954edd5e0afe5542a4adf012611a91912a3ec16', 16))
 
 We have two messages that were signed using the same *k* value.
 
-We can find *k* from the messages and signatures using following way:
+We can find *k* from the messages and signatures using the following way:
 
 The equation for s is:
 
@@ -373,7 +373,7 @@ $$ s1 = k^{-1}(H(m1) + x \cdot r1) \mod q $$
 
 $$ s2 = k^{-1}(H(m2) + x \cdot r2) \mod q $$
 
-(Note that r1 = r2 is the same for both messages, since it depends only on k)
+(Note that r1 = r2 is the same for both messages since it depends only on k)
 
 We get:
 
@@ -400,7 +400,7 @@ def eval_k(msg1: bytes, s1: int, msg2: bytes, s2: int) -> int:
     return k
 ```
 
-In order to find two messages with the same *k*, we can look for two messages with the same *r* (since *r* depends only on *k* and the domain parameters).
+To find two messages with the same *k*, we can look for two messages with the same *r* (since *r* depends only on *k* and the domain parameters).
 
 We can search the collection and find the following two messages:
 ```python
@@ -420,7 +420,7 @@ k = eval_k(msg1=msg1, s1=s1, msg2=msg2, s2=s2)
 print(f'{k=}')  # k=108994997653034620063305500641348549625
 ```
 
-And the method from last challenge to evaluate x:
+And the method from the last challenge to evaluate x:
 ```python
 # eval x
 x = estimate_x_given_k(k=k, msg=msg1, r=r1, s=s1)
@@ -445,13 +445,13 @@ $$ r = g^{k} \mod p \mod q $$
 
 When we try to verify a message with a signature containing r=0, we get: 
 
-$$ v = (g^{u1} * y^{u2}) \mod p \mod q $$
+$$ v = (g^{u1} \cdot y^{u2}) \mod p \mod q $$
 
-$$ = (0^{u1} * y^{0}) \mod p \mod q $$
+$$ = (0^{u1} \cdot y^{0}) \mod p \mod q $$
 
-$$ = (0 * 1) \mod p \mod q = 0 $$
+$$ = (0 \cdot 1) \mod p \mod q = 0 $$
 
-And the message pass verification.
+And the message passes verification.
 
 ```python
 dsa = DSA(override_g=0)
@@ -496,3 +496,491 @@ print(dsa.verify(b'Whattttt ???????', magic_sig))  # True
 
 > Challenge: https://cryptopals.com/sets/6/challenges/46
 
+We write an Oracle that checks if the plaintext of a given message is even or odd:
+```python
+class Oracle:
+    def __init__(self):
+        self.rsa = RSA(1024)
+
+    def validate_msg(self, cipher: int) -> bool:
+        """ Return True if the parity bit is zero """
+        msg = self.rsa.decrypt(cipher, output_bytes=False)
+        return not msg & 1
+```
+
+Now, using this oracle, we should be able to decrypt any ciphertext we want!
+
+Using the following identity of RSA:
+
+$$ m_{1}^{e} \cdot m_{2}^{e} = (m_{1} \cdot m_{2})^{e} \mod n $$
+
+we can control the message the oracle decrypts.
+
+If we use the Oracle to test the parity bit of the following message:
+
+$$ 2 \cdot m \mod n $$
+
+there are two possibilities:
+
+1) In case that: 
+
+    $$ 2 \cdot m < n $$
+
+    $$ m < \dfrac{n}{2} $$
+
+    the message won't wrap the modulus, and the parity bit will indicate *even*.
+
+2) In case that:
+
+    $$ 2 \cdot m > n $$
+
+    $$ m > \dfrac{n}{2} $$
+
+    the message will wrap the modulus, and the parity bit will indicate *odd* (since n is a prime number).
+
+Using $\log_{2}{n}$ iterations of this approach, we can narrow down the possible values of *m* to one:
+
+```python
+def decrypt_attack(oracle, cipher: int):
+    n = oracle.rsa.n
+    low_frac, high_frac = Fraction(0), Fraction(1)  # fraction out of n
+    low, high = 0, n
+
+    num_repetitions = n.bit_length()
+    for i in range(num_repetitions):
+        # double the message
+        cipher = (cipher * oracle.rsa.encrypt(2, input_bytes=False)) % n
+        
+        # check parity bit
+        res = oracle.validate_msg(cipher)
+
+        # the plaintext is less than half the modulus
+        if res:
+            high_frac = (high_frac - low_frac) / 2 + low_frac
+            high = n * high_frac
+
+        # the plaintext is more than half the modulus
+        else:
+            low_frac = (high_frac - low_frac) / 2 + low_frac
+            low = n * low_frac
+
+        msg = long_to_bytes(math.floor(high))
+        print(f'Iteration {i}: {msg}')
+
+    return msg
+```
+
+Finally, we can decrypt the given message:
+```python
+oracle = Oracle()
+
+# given message
+msg = 'VGhhdCdzIHdoeSBJIGZvdW5kIHlvdSBkb24ndCBwbGF5IGFyb3VuZCB3aXRoIHRoZSBGdW5reSBDb2xkIE1lZGluYQ=='
+msg = base64.b64decode(msg)
+
+# encrypt with public key
+cipher = oracle.rsa.encrypt(msg)
+
+# decrypt the cipher
+recovered_message = decrypt_attack(oracle, cipher)
+print(f'{recovered_message=}')
+```
+
+And the "hollywood style" decryption:
+```python
+Iteration 0: b']l\xdb\xb6#\x84V\x08\xf9\x1b\xbd\xc7\xa2u%:\xdeg\xff\xbe\x02\x9cN:\xf1\x85\xc4"\x97\x05\x81Mmx\xea\xb5(\xf6\x9f\x12\xec9\x01\xd1\x00\x93\xcb\xf7\x840\x86]\xba5-S\xc08g\xb7\xeb|\xca\xbeCO\x823\xcf\xdes\xe0\xb0I9<\xfeM\xd7c\x0fgS\x0c\x1b\xc1\xb9\x9d:\xd4\x8b\x84(\x03\xe9\x82\xd3\xff\xe1\x99\xc4P\x192\xb4\x9c\xbd=\xef\xcc\x95\x88kkZ\x15\xcc\x9e\x03q\x05\x93Y\xe0\xf7\x11\x0b\xbcq\xb3\x08\xb4Kq\x9e\xc4\x01\x98\x97\x94\xc3\xf2(\x0f\xa18\xc8\xa7\xa6dx\xe5\x87\x0c\x9b\xfaP\xf6$\xffS\ro\x92TM\xc2\xeb\xcagK\xea\xf1\xb0U\x9f\x91\xb7\xf9\x9d\xad\xd1\xba\xc0\x81\x17\xbep\xe5%&\xb6B\x91O\xa6\xe2\x17Y\x95ZU\xfbF~\x91\xbc:z\nW\x18\xb9\xa3\xbe\x89\xbeXy\x8b7\x05\x01\xa7\xdb\xc3\xd6\xa3\xee\x86\x89\x89\xe8\xc7\xff\xa2\x9f\x088\xf5\x14\xfc\x06\xd6\xab\x89\xed\x0c\x9f\xf7\xb9\xe0"\xf8}r'
+Iteration 1: b".\xb6m\xdb\x11\xc2+\x04|\x8d\xde\xe3\xd1:\x92\x9do3\xff\xdf\x01N'\x1dx\xc2\xe2\x11K\x82\xc0\xa6\xb6\xbcuZ\x94{O\x89v\x1c\x80\xe8\x80I\xe5\xfb\xc2\x18C.\xdd\x1a\x96\xa9\xe0\x1c3\xdb\xf5\xbee_!\xa7\xc1\x19\xe7\xef9\xf0X$\x9c\x9e\x7f&\xeb\xb1\x87\xb3\xa9\x86\r\xe0\xdc\xce\x9djE\xc2\x14\x01\xf4\xc1i\xff\xf0\xcc\xe2(\x0c\x99ZN^\x9e\xf7\xe6J\xc45\xb5\xad\n\xe6O\x01\xb8\x82\xc9\xac\xf0{\x88\x85\xde8\xd9\x84Z%\xb8\xcfb\x00\xccK\xcaa\xf9\x14\x07\xd0\x9cdS\xd32<r\xc3\x86M\xfd({\x12\x7f\xa9\x86\xb7\xc9*&\xe1u\xe53\xa5\xf5x\xd8*\xcf\xc8\xdb\xfc\xce\xd6\xe8\xdd`@\x8b\xdf8r\x92\x93[!H\xa7\xd3q\x0b\xac\xca\xad*\xfd\xa3?H\xde\x1d=\x05+\x8c\\\xd1\xdfD\xdf,<\xc5\x9b\x82\x80\xd3\xed\xe1\xebQ\xf7CD\xc4\xf4c\xff\xd1O\x84\x1cz\x8a~\x03kU\xc4\xf6\x86O\xfb\xdc\xf0\x11|>\xb9"
+
+.
+.
+.
+
+Iteration 1961: b"That's why I found you don't play around with the Funky L\x06\xd8L\x90{\x95\xd4\x1c\xc8e"
+Iteration 1962: b"That's why I found you don't play around with the Funky L\x06\xd8L\x90{\x95\xd4\x1c\xc8e"
+Iteration 1963: b"That's why I found you don't play around with the Funky L\x06\xd8L\x90{\x95\xd4\x1c\xc8e"
+Iteration 1964: b"That's why I found you don't play around with the Funky F0\n\x91.CPs\x8d6\xa9"
+Iteration 1965: b"That's why I found you don't play around with the Funky F0\n\x91.CPs\x8d6\xa9"
+Iteration 1966: b'That\'s why I found you don\'t play around with the Funky D\xbaW"U\xb5?\x1biR;'
+Iteration 1967: b"That's why I found you don't play around with the Funky C\xff}j\xe9n6oW`\x03"
+Iteration 1968: b"That's why I found you don't play around with the Funky C\xa2\x10\x8f3J\xb2\x19Nf\xe7"
+Iteration 1969: b"That's why I found you don't play around with the Funky CsZ!X8\xef\xeeI\xeaY"
+Iteration 1970: b"That's why I found you don't play around with the Funky CsZ!X8\xef\xeeI\xeaY"
+Iteration 1971: b"That's why I found you don't play around with the Funky CsZ!X8\xef\xeeI\xeaY"
+Iteration 1972: b"That's why I found you don't play around with the Funky CsZ!X8\xef\xeeI\xeaY"
+Iteration 1973: b"That's why I found you don't play around with the Funky Cpn\xbaz\x87\xd3\xcb\x99\xa2\x91"
+Iteration 1974: b"That's why I found you don't play around with the Funky Cpn\xbaz\x87\xd3\xcb\x99\xa2\x91"
+Iteration 1975: b"That's why I found you don't play around with the Funky Co\xb3\xe0\xc3\x1b\x8c\xc2\xed\x90\x9e"
+Iteration 1976: b"That's why I found you don't play around with the Funky Co\xb3\xe0\xc3\x1b\x8c\xc2\xed\x90\x9e"
+Iteration 1977: b'That\'s why I found you don\'t play around with the Funky Co\x85*U@{\x00\xc2\x8c"'
+Iteration 1978: b"That's why I found you don't play around with the Funky Com\xcf\x1eR\xf2\x1f\xad\t\xe4"
+Iteration 1979: b"That's why I found you don't play around with the Funky Com\xcf\x1eR\xf2\x1f\xad\t\xe4"
+Iteration 1980: b"That's why I found you don't play around with the Funky Com\xcf\x1eR\xf2\x1f\xad\t\xe4"
+Iteration 1981: b"That's why I found you don't play around with the Funky Com\xcf\x1eR\xf2\x1f\xad\t\xe4"
+Iteration 1982: b"That's why I found you don't play around with the Funky Com\xcf\x1eR\xf2\x1f\xad\t\xe4"
+Iteration 1983: b"That's why I found you don't play around with the Funky Com\x14D\x9b\x85\xd8\xa4]\xd2"
+Iteration 1984: b"That's why I found you don't play around with the Funky Col\xb6\xd7\xbf\xcf\xb5 \x07\xc9"
+Iteration 1985: b"That's why I found you don't play around with the Funky Col\x88!Q\xf4\xa3]\xdc\xc4"
+Iteration 1986: b"That's why I found you don't play around with the Funky Colp\xc6\x1b\x07\x1a|\xc7B"
+Iteration 1987: b"That's why I found you don't play around with the Funky Cole\x18\x7f\x90V\x0c<\x81"
+Iteration 1988: b"That's why I found you don't play around with the Funky Cole\x18\x7f\x90V\x0c<\x81"
+Iteration 1989: b"That's why I found you don't play around with the Funky Cole\x18\x7f\x90V\x0c<\x81"
+Iteration 1990: b"That's why I found you don't play around with the Funky Cole\x18\x7f\x90V\x0c<\x81"
+Iteration 1991: b"That's why I found you don't play around with the Funky Cold]\xa5\xd8\xe9\xc53\xd5"
+Iteration 1992: b"That's why I found you don't play around with the Funky Cold]\xa5\xd8\xe9\xc53\xd5"
+Iteration 1993: b"That's why I found you don't play around with the Funky Cold.\xefk\x0e\xb3q\xaa"
+Iteration 1994: b"That's why I found you don't play around with the Funky Cold.\xefk\x0e\xb3q\xaa"
+Iteration 1995: b"That's why I found you don't play around with the Funky Cold#A\xcf\x97\xef\x01\x1f"
+Iteration 1996: b"That's why I found you don't play around with the Funky Cold#A\xcf\x97\xef\x01\x1f"
+Iteration 1997: b"That's why I found you don't play around with the Funky Cold Vh\xba=\xe4\xfc"
+Iteration 1998: b"That's why I found you don't play around with the Funky Cold Vh\xba=\xe4\xfc"
+Iteration 1999: b"That's why I found you don't play around with the Funky Cold Vh\xba=\xe4\xfc"
+Iteration 2000: b"That's why I found you don't play around with the Funky Cold Vh\xba=\xe4\xfc"
+Iteration 2001: b"That's why I found you don't play around with the Funky Cold Vh\xba=\xe4\xfc"
+Iteration 2002: b"That's why I found you don't play around with the Funky Cold Vh\xba=\xe4\xfc"
+Iteration 2003: b"That's why I found you don't play around with the Funky Cold Vh\xba=\xe4\xfc"
+Iteration 2004: b"That's why I found you don't play around with the Funky Cold P\x91\xec\x82\x82\xc4"
+Iteration 2005: b"That's why I found you don't play around with the Funky Cold M\xa6\x85\xa4\xd1\xa8"
+Iteration 2006: b"That's why I found you don't play around with the Funky Cold M\xa6\x85\xa4\xd1\xa8"
+Iteration 2007: b"That's why I found you don't play around with the Funky Cold M\xa6\x85\xa4\xd1\xa8"
+Iteration 2008: b"That's why I found you don't play around with the Funky Cold M\xa6\x85\xa4\xd1\xa8"
+Iteration 2009: b"That's why I found you don't play around with the Funky Cold Mw\xcf6\xf6\x96"
+Iteration 2010: b"That's why I found you don't play around with the Funky Cold Mw\xcf6\xf6\x96"
+Iteration 2011: b"That's why I found you don't play around with the Funky Cold Ml!\x9b\x7f\xd2"
+Iteration 2012: b"That's why I found you don't play around with the Funky Cold MfJ\xcd\xc4o"
+Iteration 2013: b"That's why I found you don't play around with the Funky Cold MfJ\xcd\xc4o"
+Iteration 2014: b"That's why I found you don't play around with the Funky Cold MfJ\xcd\xc4o"
+Iteration 2015: b"That's why I found you don't play around with the Funky Cold Me\x8f\xf4\r\x03"
+Iteration 2016: b"That's why I found you don't play around with the Funky Cold Me\x8f\xf4\r\x03"
+Iteration 2017: b"That's why I found you don't play around with the Funky Cold Me\x8f\xf4\r\x03"
+Iteration 2018: b"That's why I found you don't play around with the Funky Cold Mex\x98\xd6\x16"
+Iteration 2019: b"That's why I found you don't play around with the Funky Cold Mel\xeb:\x9f"
+Iteration 2020: b"That's why I found you don't play around with the Funky Cold Meg\x14l\xe3"
+Iteration 2021: b"That's why I found you don't play around with the Funky Cold Meg\x14l\xe3"
+Iteration 2022: b"That's why I found you don't play around with the Funky Cold Mee\x9e\xb9u"
+Iteration 2023: b"That's why I found you don't play around with the Funky Cold Med\xe3\xdf\xbd"
+Iteration 2024: b"That's why I found you don't play around with the Funky Cold Med\x86r\xe1"
+Iteration 2025: b"That's why I found you don't play around with the Funky Cold Med\x86r\xe1"
+Iteration 2026: b"That's why I found you don't play around with the Funky Cold Medo\x17\xab"
+Iteration 2027: b"That's why I found you don't play around with the Funky Cold Medo\x17\xab"
+Iteration 2028: b"That's why I found you don't play around with the Funky Cold Medo\x17\xab"
+Iteration 2029: b"That's why I found you don't play around with the Funky Cold Medl,D"
+Iteration 2030: b"That's why I found you don't play around with the Funky Cold Medj\xb6\x90"
+Iteration 2031: b"That's why I found you don't play around with the Funky Cold Medi\xfb\xb6"
+Iteration 2032: b"That's why I found you don't play around with the Funky Cold Medi\x9eJ"
+Iteration 2033: b"That's why I found you don't play around with the Funky Cold Medio\x93"
+Iteration 2034: b"That's why I found you don't play around with the Funky Cold Medio\x93"
+Iteration 2035: b"That's why I found you don't play around with the Funky Cold Medio\x93"
+Iteration 2036: b"That's why I found you don't play around with the Funky Cold Medio\x93"
+Iteration 2037: b"That's why I found you don't play around with the Funky Cold Medio\x93"
+Iteration 2038: b"That's why I found you don't play around with the Funky Cold Medio\x93"
+Iteration 2039: b"That's why I found you don't play around with the Funky Cold Medin\xd8"
+Iteration 2040: b"That's why I found you don't play around with the Funky Cold Medin{"
+Iteration 2041: b"That's why I found you don't play around with the Funky Cold Medin{"
+Iteration 2042: b"That's why I found you don't play around with the Funky Cold Medind"
+Iteration 2043: b"That's why I found you don't play around with the Funky Cold Medind"
+Iteration 2044: b"That's why I found you don't play around with the Funky Cold Medind"
+Iteration 2045: b"That's why I found you don't play around with the Funky Cold Medina"
+```
+
+
+
+## Challenge 47 - Bleichenbacher's PKCS 1.5 Padding Oracle (Simple Case)
+
+> Challenge: https://cryptopals.com/sets/6/challenges/47
+
+The following challenge is based on the paper: 
+
+[Chosen Ciphertext Attacks Against Protocols Based on the RSA Encryption Standard PKCS #1](https://archiv.infsec.ethz.ch/education/fs08/secsem/bleichenbacher98.pdf)
+
+We start with the setup.
+
+We implement an Oracle, that performs the PKCS #1 padding and verify the padding correctness:
+```python
+class RSA_PKCS1_Type2_Oracle(RsaBase):
+    """
+    Implementation of RSA Encryption Scheme.
+    Based on the standard PKCS #1 Version 1.5 for type-2 blocks
+    https://www.rfc-editor.org/rfc/rfc2313
+    """
+    def __init__(self, key_len=1024):
+        super().__init__(key_len)
+
+    def pkcs_padding(self, msg: bytes) -> bytes:
+        # check bounds
+        if len(msg) > self.k - 11:
+            raise ValueError(f'Message length must not exceeds {self.k - 11} octets')
+
+        # encode the data
+        prefix = b'\x00\x02'
+        padding = bytes([randint(1, 2 ** 8 - 1) for _ in range(self.k - 3 - len(msg))])
+        suffix = b'\x00'
+
+        # EB = 00 || BT || PS || 00 || D
+        msg_encoded = prefix + padding + suffix + msg
+        assert len(msg_encoded) == self.k
+
+        return msg_encoded
+
+    def pkcs_unpadding(self, msg: bytes) -> bytes:
+        """
+        Un-pad the PKCS message.
+        raise [AttributeError] is mark is incorrect.
+        raise [ValueError] if \x00 sep is not included.
+        """
+        # verify the PKCS mark
+        if msg[0:2] != b'\x00\x02':
+            raise AttributeError('Cipher is not PKCS conforming')
+
+        # find the 00 separator between the padding and the payload
+        sep_idx = msg.index(b'\x00', 2)
+        sep_idx += 1
+
+        # decode the message block
+        msg = msg[sep_idx:]
+        return msg
+
+    def encrypt(self, msg: bytes) -> int:
+        # encode the message
+        msg_encoded = self.pkcs_padding(msg)
+
+        # convert to integer and encrypt
+        msg_encoded = self.bytes_to_integer(msg_encoded)
+        cipher = self.encrypt_base(msg_encoded)
+
+        return cipher
+
+    def validate_msg(self, cipher: int) -> bool:
+        """ Return True if the message starts with \x00\x02 """
+        # decrypt cipher and convert to bytes
+        msg = self.decrypt_base(cipher)
+        msg = self.integer_to_bytes_padded(msg)
+        assert len(msg) == self.k
+
+        # verify the PKCS mark
+        if msg[0:2] == b'\x00\x02':
+            return True
+        else:
+            return False
+```
+
+
+Next, we implement the paper. 
+
+(In this challenge, we assume we can skip step 2.b and the union in step 3):
+
+```python
+def bleichenbacher98_attack_partial(oracle: RSA_PKCS1_Type2_Oracle, c: int):
+    # Set consts
+    e, n = oracle.e, oracle.n
+    B = 2 ** (8 * (oracle.k-2))
+
+    # Initialize variables
+    i = 1
+    M_prev = [(2*B, 3*B - 1)]
+    s_prev = None
+
+    # Step 1: Blinding.
+    # (In our case, c in already PKCS conforming)
+    s0 = 1
+    c0 = (c * pow(s0, e, n)) % n
+
+    while True:
+        print(f'Iteration number {i} ...')
+
+        # Step 2: Searching for PKCS conforming messages.
+        # Step 2.a: find the smallest positive integer s1 >= n/3B
+        if i == 1:
+            s = integer_division_ceil(n, (3*B))
+            while not oracle.validate_msg((c0 * pow(s, e, n)) % n):
+                s += 1
+
+        # Step 2.b: Searching with more than one interval left.
+        elif len(M_prev) > 1:
+            raise NotImplementedError
+
+        # Step 2.c: Searching with one interval left.
+        else:
+            a, b = M_prev[0]
+            r = integer_division_ceil(2 * (b * s_prev - 2 * B), n)
+            s = integer_division_ceil((2 * B + r * n), b)
+
+            while True:
+                if oracle.validate_msg((c0 * pow(s, e, n)) % n):
+                    break
+
+                if s < (3 * B + r * n) // a:
+                    s += 1
+
+                else:
+                    r += 1
+                    s = integer_division_ceil((2 * B + r * n), b)
+
+        # verify step 2 result
+        assert oracle.validate_msg((c0 * pow(s, e, n)) % n)
+
+        # Step 3: Narrowing the set of solutions.
+        a, b = M_prev[0]
+
+        r_up = (b*s - 2*B) // n
+        r_dwn = integer_division_ceil((a*s - 3*B + 1), n)
+        assert r_up == r_dwn
+        r = r_dwn
+
+        dwn = max(a, integer_division_ceil((2*B + r*n), s))
+        up = min(b, (3*B - 1 + r*n) // s)
+
+        M = [(dwn, up)]
+
+        # Step 4: Computing the solution.
+        if len(M) == 1 and M[0][0] == M[0][1]:
+            m = (M[0][0] * invmod(s0, n)) % n
+            return m
+
+        # Update prev variables
+        s_prev = s
+        M_prev = M
+        i += 1
+```
+
+And using the attack to decrypt the cipher:
+```python
+oracle = RSA_PKCS1_Type2_Oracle(key_len=256)
+msg = b'kick it, CC'
+
+cipher = oracle.encrypt(msg)
+
+decryption = bleichenbacher98_attack_partial(oracle, cipher)
+decryption = oracle.integer_to_bytes_padded(decryption)
+decryption = oracle.pkcs_unpadding(decryption)
+assert decryption == msg
+```
+
+
+
+## Challenge 48 - Bleichenbacher's PKCS 1.5 Padding Oracle (Complete Case)
+
+> Challenge: https://cryptopals.com/sets/6/challenges/48
+
+This challenge extends the solution of the last one.
+
+We start with the union function for step 3:
+```python
+def calc_set_union(interval_set: list) -> list:
+    """
+    Calc the union of given intervals
+    :param interval_set: list of intervals of the form (start, end)
+    :return: list of intervals corresponding to the union
+    """
+    interval_set.sort(key=lambda interval: interval[0])
+    y = [interval_set[0]]
+    for x in interval_set[1:]:
+        if y[-1][1] < x[0]:
+            y.append(x)
+        else:
+            y[-1] = y[-1][0],  max(y[-1][1], x[1])
+
+    return y
+```
+
+Then, we complete the missing steps from the challenge:
+```python
+def bleichenbacher98_attack(oracle: RSA_PKCS1_Type2_Oracle, c: int):
+    # Set consts
+    e, n = oracle.e, oracle.n
+    B = 2 ** (8 * (oracle.k-2))
+
+    # Initialize variables
+    i = 1
+    M_prev = [(2*B, 3*B - 1)]
+    s_prev = None
+
+    # Step 1: Blinding.
+    # (In our case, c in already PKCS conforming)
+    s0 = 1
+    c0 = (c * pow(s0, e, n)) % n
+
+    while True:
+        print(f'Iteration number {i} ...')
+
+        # Step 2: Searching for PKCS conforming messages.
+        # Step 2.a: find the smallest positive integer s1 >= n/3B
+        if i == 1:
+            s = integer_division_ceil(n, (3*B))
+            while not oracle.validate_msg((c0 * pow(s, e, n)) % n):
+                s += 1
+
+        # Step 2.b: Searching with more than one interval left.
+        elif len(M_prev) > 1:
+            s = s_prev + 1
+            while not oracle.validate_msg((c0 * pow(s, e, n)) % n):
+                s += 1
+
+        # Step 2.c: Searching with one interval left.
+        else:
+            a, b = M_prev[0]
+            r = integer_division_ceil(2 * (b * s_prev - 2 * B), n)
+            s = integer_division_ceil((2 * B + r * n), b)
+
+            while True:
+                if oracle.validate_msg((c0 * pow(s, e, n)) % n):
+                    break
+
+                if s < (3 * B + r * n) // a:
+                    s += 1
+
+                else:
+                    r += 1
+                    s = integer_division_ceil((2 * B + r * n), b)
+
+        # verify step 2 result
+        assert oracle.validate_msg((c0 * pow(s, e, n)) % n)
+
+        # Step 3: Narrowing the set of solutions.
+        M_tmp = []
+        for a, b in M_prev:
+            r_up = (b*s - 2*B) // n
+            r_dwn = integer_division_ceil((a*s - 3*B + 1), n)
+
+            for r in range(r_dwn, r_up + 1):
+                dwn = max(a, integer_division_ceil((2*B + r*n), s))
+                up = min(b, (3*B - 1 + r*n) // s)
+                M_tmp.append((dwn, up))
+
+        if len(M_tmp) > 1:
+            M = calc_set_union(M_tmp)
+        else:
+            M = M_tmp
+
+        # Step 4: Computing the solution.
+        if len(M) == 1 and M[0][0] == M[0][1]:
+            m = (M[0][0] * invmod(s0, n)) % n
+            return m
+
+        # Update prev variables
+        s_prev = s
+        M_prev = M
+        i += 1
+```
+
+And decrypting the cipher:
+```python
+oracle = RSA_PKCS1_Type2_Oracle(key_len=768)
+msg = b'kick it, CC'
+
+cipher = oracle.encrypt(msg)
+
+decryption = bleichenbacher98_attack(oracle, cipher)
+decryption = oracle.integer_to_bytes_padded(decryption)
+decryption = oracle.pkcs_unpadding(decryption)
+assert decryption == msg
+```
+
+We did it!
+We did it!
+We did it!
+
+Yeah!
+Hooray!
+Woo!
+
+We did it!

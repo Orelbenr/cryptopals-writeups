@@ -65,3 +65,13 @@ Some of the cryptographic topics covered:
 	7. Challenge 39 - Implement RSA
 	8. Challenge 40 - Implement an E=3 RSA Broadcast attack
 
+
+6. [Set 6: RSA and DSA](Set6_RSA_and_DSA)
+	1. Challenge 41 - Implement unpadded message recovery oracle
+	2. Challenge 42 - Bleichenbacher's e=3 RSA Attack
+	3. Challenge 43 - DSA key recovery from nonce
+	4. Challenge 44 - DSA nonce recovery from repeated nonce
+	5. Challenge 45 - DSA parameter tampering
+	6. Challenge 46 - RSA parity oracle
+	7. Challenge 47 - Bleichenbacher's PKCS 1.5 Padding Oracle (Simple Case)
+	8. Challenge 48 - Bleichenbacher's PKCS 1.5 Padding Oracle (Complete Case)

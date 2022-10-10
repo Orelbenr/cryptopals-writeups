@@ -47,9 +47,65 @@ Print the upper bound of the message as a string at each iteration; you'll see t
 Decrypt the string (after encrypting it to a hidden private key) above.
 """
 
+import base64
+import math
+from fractions import Fraction
+
+from Utils.PublicKey import RSA
+
+
+class Oracle:
+    def __init__(self):
+        self.rsa = RSA(1024)
+
+    def validate_msg(self, cipher: int) -> bool:
+        """ Return True if the parity bit is zero """
+        msg = self.rsa.decrypt(cipher, output_bytes=False)
+        return not msg & 1
+
+
+def decrypt_attack(oracle, cipher: int):
+    n = oracle.rsa.n
+    low_frac, high_frac = Fraction(0), Fraction(1)  # fraction out of n
+    low, high = 0, n
+
+    num_repetitions = n.bit_length()
+    for i in range(num_repetitions):
+        # double the message
+        cipher = (cipher * oracle.rsa.encrypt(2, input_bytes=False)) % n
+
+        # check parity bit
+        res = oracle.validate_msg(cipher)
+
+        # the plaintext is less than half the modulus
+        if res:
+            high_frac = (high_frac - low_frac) / 2 + low_frac
+            high = n * high_frac
+
+        # the plaintext is more than half the modulus
+        else:
+            low_frac = (high_frac - low_frac) / 2 + low_frac
+            low = n * low_frac
+
+        msg = RSA.integer_to_bytes_squeezed(math.floor(high))
+        print(f'Iteration {i}: {msg}')
+
+    return msg
+
 
 def main():
-    pass
+    oracle = Oracle()
+
+    # given message
+    msg = 'VGhhdCdzIHdoeSBJIGZvdW5kIHlvdSBkb24ndCBwbGF5IGFyb3VuZCB3aXRoIHRoZSBGdW5reSBDb2xkIE1lZGluYQ=='
+    msg = base64.b64decode(msg)
+
+    # encrypt with public key
+    cipher = oracle.rsa.encrypt(msg)
+
+    # decrypt the cipher
+    recovered_message = decrypt_attack(oracle, cipher)
+    print(f'{recovered_message=}')
 
 
 if __name__ == '__main__':

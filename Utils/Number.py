@@ -68,6 +68,11 @@ def invpow_integer(x, n):
     return mid + 1
 
 
+def integer_division_ceil(a: int, b: int) -> int:
+    """ Return ceil(a/b) without losing precision of floating points numbers """
+    return (a + b - 1) // b
+
+
 if __name__ == '__main__':
     # gcd, coeffs = extended_gcd(240, 46)
     # print(gcd, coeffs)
