@@ -331,6 +331,7 @@ session_id = decode_session_id(oracle_ctr)
 assert session_id == SESSION_ID
 ```
 
+---
 Now, we use CBC (Block Cipher) to encrypt the response. This time, the response may not be aligned at the end of the block, and the block will hide the exact plain text length.
 
 In order to deal with it, we align the response to a tipping point, by brute forcing all posible padding lengths.
