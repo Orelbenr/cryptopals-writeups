@@ -240,6 +240,8 @@ print(final_msg.decode('ascii'))
 
 > Challenge: https://cryptopals.com/sets/7/challenges/51
 
+The challenge is based on the paper [BREACH: REVIVING THE CRIME ATTACK](https://www.breachattack.com/resources/BREACH%20-%20SSL,%20gone%20in%2030%20seconds.pdf).
+
 We create the Compression Oracle. 
 
 The Oracle format the data with http header, compress the request, encrypt it and return the resulting length:
@@ -418,7 +420,7 @@ Now, we need to create a function f(n) that will generate 2^n collisions in this
 
 According to the [Birthday Paradox](https://en.wikipedia.org/wiki/Birthday_problem), The naive approach of brute-forcing the search will result in $\Theta(2^{n} \cdot 2^{b \cdot (2^{n}-1) / 2^{n}})$ guesses in average (where b is the bit-size of the hash function).
 
-To narrow down te search, we use [Joux’s multicollision attack](https://cs.uwaterloo.ca/~dstinson/Pyth4.pdf).
+To narrow down the search, we use [Joux’s multicollision attack](https://cs.uwaterloo.ca/~dstinson/Pyth4.pdf).
 
 The idea is to find $n$ successive collisions in the compression function, each of which requires time $\Theta(2^{b/2})$, resulting in total of $\Theta(n \cdot 2^{b/2})$ .
 
@@ -734,3 +736,6 @@ Using a naive approche would require $2^n = 4,294,967,296$ iterations.
 ## Challenge 54 - Kelsey and Kohno's Nostradamus Attack
 
 > Challenge: https://cryptopals.com/sets/7/challenges/54
+
+The challenge is based on the paper [Herding Hash Functions and the Nostradamus Attack](https://link.springer.com/chapter/10.1007/11761679_12).
+
