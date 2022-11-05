@@ -7,7 +7,8 @@
 52. [Challenge 52 - Iterated Hash Function Multicollisions](#challenge-52---iterated-hash-function-multicollisions)
 53. [Challenge 53 - Kelsey and Schneier's Expandable Messages](#challenge-53---kelsey-and-schneiers-expandable-messages)
 54. [Challenge 54 - Kelsey and Kohno's Nostradamus Attack](#challenge-54---kelsey-and-kohnos-nostradamus-attack)
-
+55. [Challenge 55 - MD4 Collisions](#challenge-55---md4-collisions)
+56. [Challenge 56 - RC4 Single-Byte Biases](#challenge-56---rc4-single-byte-biases)
 
 
 
@@ -738,4 +739,184 @@ Using a naive approche would require $2^n = 4,294,967,296$ iterations.
 > Challenge: https://cryptopals.com/sets/7/challenges/54
 
 The challenge is based on the paper [Herding Hash Functions and the Nostradamus Attack](https://link.springer.com/chapter/10.1007/11761679_12).
+
+Kelsey and Kohno (2006) described the following hash function property, presented as a game between an attacker and a challenger:
+
+*Chosen-target-forced-prefix resistance - An attacker commits to a message digest, z, and is then challenged with a prefix, P. It should be infeasible for the attacker to be able to find a suffix S such that hash(P k S) = z.* ([source](https://cs.uwaterloo.ca/~dstinson/Pyth4.pdf))
+
+In this challenge we implement an attack that violates CTFP resistance agianst Merkle-Damgard hash functions (often called a herding attack).
+
+The attack uses a precomputed data structure called a diamond structure: 
+- A 2^k-diamond structure contains a complete binary tree of depth k. 
+- Every edge $e$ in the diamond structure is labeled by a string $σ(e)$ and consist one message block.
+- Each node $N$ in the structure correspond to the hash of the concatinated messages on the path from the source node to the node $N$ in the diamond structure.
+- At any level $l$ of the structure there are $2^{k−l}$ hash values.
+- These values must be paired, such that, when the next message blocks are appended, $2^{k−l−1}$ collisions occur.
+
+We implement the structure computation:
+```python
+def build_diamond_structure(k: int, state_size: int) -> (list[StateNode], bytes):
+    """
+    Build the diamond structure
+    :param k: number of levels in the tree
+    :param state_size: hash func output size
+    :return: - list of [StateNode] with the tree leaves
+             - state of root node
+    """
+    # Generate 2^k initial hash states
+    initial_states = [StateNode(random.randbytes(state_size)) for _ in range(2**k)]
+
+    state_list = initial_states
+    # build the tree one level at a time (starting from leaves)
+    for _ in range(k):
+        next_state_list = []
+        # Pair the states and generate single-block collisions
+        for idx in range(0, len(state_list), 2):
+            node1, node2 = state_list[idx], state_list[idx+1]
+            m1, m2, hash_out = find_collision(node1.state, node2.state)
+
+            # update the tree structure
+            new_node = StateNode(hash_out)
+            next_state_list.append(new_node)
+            node1.msg, node2.msg = m1, m2
+            node1.next_node, node2.next_node = new_node, new_node
+
+        # update node list for next level
+        state_list = next_state_list
+
+    return initial_states, state_list[0].state
+```
+
+We used the function *find_collision* which is implemented as follows:
+```python
+def find_collision(state1: bytes, state2: bytes):
+    """
+    Find a collision between two single-block messages from different initial states
+    :return: (block message 1, block message 2, next state)
+    """
+
+    if len(state1) != len(state2):
+        raise ValueError('both states must have the same length')
+
+    n = len(state1) * 8  # state length in bits
+
+    block1_hash = {}
+    while True:
+        # constructs about 2^(n/2) messages from state1
+        for _ in range(n//2):
+            msg1 = random.randbytes(AES.block_size)
+            msg1_hash = merkle_damgard(msg1, state1, len(state1), add_len_pad=False)
+            block1_hash[msg1_hash] = msg1
+
+        # find collision with messages from state2
+        for _ in range(n//2):
+            msg2 = random.randbytes(AES.block_size)
+            msg2_hash = merkle_damgard(msg2, state2, len(state2), add_len_pad=False)
+
+            # check for collision
+            if msg2_hash in block1_hash:
+                m1 = block1_hash[msg2_hash]
+                m2 = msg2
+                hash_out = msg2_hash
+
+                assert len(m1) == len(m2) == AES.block_size
+                assert merkle_damgard(m1, state1, len(state1), add_len_pad=False) == hash_out
+                assert merkle_damgard(m2, state2, len(state2), add_len_pad=False) == hash_out
+                return m1, m2, hash_out
+```
+
+Back to our problem of *proof of a secret prediction*:
+
+- We commit to the hash value that appears at the root of the diamond structure (after padding the message length).
+- Then, a challenger provides a prefix $P$.
+- We generate glue blocks such that the last block collide into one of the leaves in the tree.
+- Finally, we follow the path from the leaf all the way up to the root node, and build the prediction using the message blocks along the way.
+
+```python
+class Prognosticating:
+    def __init__(self, k: int, initial_state: bytes, max_msg_blocks: int):
+        self.k = k
+        self.initial_state, self.state_size = initial_state, len(initial_state)
+        self.max_msg_blocks = max_msg_blocks
+        self.diamond_leaves, self.root_state = build_diamond_structure(k, self.state_size)
+
+    def get_hash_prediction(self):
+        """ Compute the padded hash value we commit """
+        # create padding block
+        prediction_len = (self.max_msg_blocks + 1 + self.k) * AES.block_size
+        padding_block = prediction_len.to_bytes(AES.block_size, 'big')
+
+        # find finale hash
+        hash_prediction = merkle_damgard(padding_block, self.root_state, len(self.root_state), add_len_pad=False)
+        return hash_prediction
+
+    @timeit
+    def generate_prediction(self, prefix: bytes):
+        """ Generate a prediction containing given [prefix] """
+        # validate prefix max length
+        if math.ceil(len(prefix) / AES.block_size) > self.max_msg_blocks:
+            raise ValueError('prefix is too long')
+
+        # pad the prefix to match multiply of block size
+        reminder = len(prefix) % AES.block_size
+        if reminder > 0:
+            prefix += bytes(AES.block_size - reminder)
+
+        # find collision with one of the tree leaves
+        prefix_hash = merkle_damgard(prefix, self.initial_state, self.state_size, add_len_pad=False)
+        while True:
+            link_msg = random.randbytes(AES.block_size)
+            tmp_hash = merkle_damgard(link_msg, prefix_hash, self.state_size, add_len_pad=False)
+
+            leaf = next((x for x in self.diamond_leaves if x.state == tmp_hash), None)
+            if leaf is not None:
+                break
+
+        # build message
+        msg = prefix + link_msg
+        tmp_node = leaf
+        while tmp_node.next_node is not None:
+            msg += tmp_node.msg
+            tmp_node = tmp_node.next_node
+
+        return msg
+```
+
+Using *Prognosticating*, we can fake a secret prediction:
+```python
+k = 9  # number of levels in the diamond structure
+state_size = 4  # state size in bytes
+initial_state = random.randbytes(state_size)
+
+# create proof of a secret prediction
+prognosticating = Prognosticating(k=k, initial_state=initial_state, max_msg_blocks=2)
+hash_prediction = prognosticating.get_hash_prediction()
+print(f'Published hash: {hash_prediction}')  # Published hash: b'\xdb5e\xa1'
+
+# generate prediction
+challenger_prefix = b'Team ABC won with 30 points'
+prediction = prognosticating.generate_prediction(challenger_prefix)
+print(f'Prediction: {prediction}')  # Prediction: b'Team ABC won with 30 points\x00\x00\x00\x00\x00Mij\x85\xed\xdcO}\r6u\x8f\x83\x93\xa1X\x887\x01\xad=\x86lR\xdaA\x91\xd3\x1e&R\x10SK\x07\x19\xa2@\x06\x11ss6\xf3E<\xf7e\x83\xf6lK\xe6\xe5\xbc\xa6_o\xe1\xc2\x0f\xf1v\x0b\xc2c\xa36J\xd1\r\xcf\xfczl\x02%\xca\x87\x1d\xe7\\@6\xe7\xea\xff\x04\xeb\xb9\xeb\xbcl\x81(\x99\xc4Q\x18i\xe3}\x8f\xd2\xc3\x0b(\xe0\xb9\xe0\x9c\x1e\xfeY\xd7\xde\x04=g\xa7/\x05\x9a\x15\xa4\xfeS\xe8\x1b\x081\xa5\xef0?\xd1o\xdd\x1b\x83\x01I\x8d\x9d\xba\x0f\xeaa\x0c\xcfm-\x05\x0c]\x9c9]5\xee'
+
+# verify result
+real_prediction_hash = merkle_damgard(prediction, initial_state, state_size)
+print(f'Prediction hash: {real_prediction_hash}')  # Prediction hash: b'\xdb5e\xa1'
+assert real_prediction_hash == hash_prediction
+```
+
+Note that the suffix length is only $k+1$ blocks long.
+
+
+
+## Challenge 55 - MD4 Collisions
+
+> Challenge: https://cryptopals.com/sets/7/challenges/55
+
+The challenge is based on the paper [Cryptanalysis of the Hash Functions MD4 and RIPEMD](https://link.springer.com/chapter/10.1007/11426639_1).
+
+
+
+## Challenge 56 - RC4 Single-Byte Biases
+
+> Challenge: https://cryptopals.com/sets/7/challenges/56
 

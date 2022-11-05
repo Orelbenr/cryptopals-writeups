@@ -58,7 +58,7 @@ import random
 from Crypto.Cipher import AES
 
 
-def merkle_damgard_aes128(msg: bytes, state: bytes, state_size: int, add_len_pad: bool = True) -> bytes:
+def merkle_damgard(msg: bytes, state: bytes, state_size: int, add_len_pad: bool = True) -> bytes:
     if len(state) != state_size:
         raise ValueError(f'H must have length of {state_size}')
 
@@ -131,16 +131,16 @@ def find_collision(state: bytes, k: int, j: int):
         # constructs about 2^(n/2) messages of length 1
         for _ in range(n//2+1):
             msg = random.randbytes(AES.block_size)
-            msg_hash = merkle_damgard_aes128(msg, state, len(state), add_len_pad=False)
+            msg_hash = merkle_damgard(msg, state, len(state), add_len_pad=False)
             one_block_hash[msg_hash] = msg
 
         # find collision with messages of length 2^(k-j)+1
         prefix = random.randbytes(AES.block_size * (2 ** (k - j)))
-        prefix_hash = merkle_damgard_aes128(prefix, state, len(state), add_len_pad=False)
+        prefix_hash = merkle_damgard(prefix, state, len(state), add_len_pad=False)
 
         for _ in range(n//2+1):
             last_block = random.randbytes(AES.block_size)
-            hash_result = merkle_damgard_aes128(last_block, prefix_hash, len(prefix_hash), add_len_pad=False)
+            hash_result = merkle_damgard(last_block, prefix_hash, len(prefix_hash), add_len_pad=False)
 
             # check for collision
             if hash_result in one_block_hash:
@@ -150,8 +150,8 @@ def find_collision(state: bytes, k: int, j: int):
 
                 assert len(m1) == AES.block_size
                 assert len(m2) == AES.block_size * (2 ** (k-j) + 1)
-                assert merkle_damgard_aes128(m1, state, len(state), add_len_pad=False) == hash_out
-                assert merkle_damgard_aes128(m2, state, len(state), add_len_pad=False) == hash_out
+                assert merkle_damgard(m1, state, len(state), add_len_pad=False) == hash_out
+                assert merkle_damgard(m2, state, len(state), add_len_pad=False) == hash_out
                 return m1, m2, hash_out
 
 
@@ -182,7 +182,7 @@ def preimage_attack(msg: bytes, initial_state: bytes):
     # find a single-block "bridge" to intermediate state in the map
     while True:
         bridge_block = random.randbytes(AES.block_size)
-        next_state = merkle_damgard_aes128(bridge_block, expandable_msg.hash, state_size, add_len_pad=False)
+        next_state = merkle_damgard(bridge_block, expandable_msg.hash, state_size, add_len_pad=False)
         if next_state in hash_states:
             suffix_idx = hash_states[next_state] + AES.block_size
             break
@@ -197,8 +197,8 @@ def preimage_attack(msg: bytes, initial_state: bytes):
 
     # check validity
     assert len(forged_msg) == len(msg)
-    assert merkle_damgard_aes128(msg, initial_state, state_size) ==\
-           merkle_damgard_aes128(forged_msg, initial_state, state_size)
+    assert merkle_damgard(msg, initial_state, state_size) == \
+           merkle_damgard(forged_msg, initial_state, state_size)
 
     return forged_msg
 
@@ -210,11 +210,11 @@ def main():
 
     state_size = 4    # state size in bytes
     initial_state = random.randbytes(state_size)
-    msg_hash = merkle_damgard_aes128(msg, initial_state, state_size)
+    msg_hash = merkle_damgard(msg, initial_state, state_size)
 
     # forge message
     forged_msg = preimage_attack(msg, initial_state)
-    assert merkle_damgard_aes128(forged_msg, initial_state, state_size) == msg_hash
+    assert merkle_damgard(forged_msg, initial_state, state_size) == msg_hash
 
 
 if __name__ == '__main__':

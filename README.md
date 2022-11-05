@@ -75,3 +75,14 @@ Some of the cryptographic topics covered:
 	6. Challenge 46 - RSA parity oracle
 	7. Challenge 47 - Bleichenbacher's PKCS 1.5 Padding Oracle (Simple Case)
 	8. Challenge 48 - Bleichenbacher's PKCS 1.5 Padding Oracle (Complete Case)
+
+
+7. [Set 7: Hashes](Set7_Hashes)
+	1. Challenge 49 - CBC-MAC Message Forgery
+	2. Challenge 50 - Hashing with CBC-MAC
+	3. Challenge 51 - Compression Ratio Side-Channel Attacks
+	4. Challenge 52 - Iterated Hash Function Multicollisions
+	5. Challenge 53 - Kelsey and Schneier's Expandable Messages
+	6. Challenge 54 - Kelsey and Kohno's Nostradamus Attack
+	7. Challenge 55 - MD4 Collisions
+	8. Challenge 56 - RC4 Single-Byte Biases
