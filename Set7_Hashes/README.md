@@ -916,6 +916,29 @@ The challenge is based on the paper [Cryptanalysis of the Hash Functions MD4 and
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ## Challenge 56 - RC4 Single-Byte Biases
 
 > Challenge: https://cryptopals.com/sets/7/challenges/56

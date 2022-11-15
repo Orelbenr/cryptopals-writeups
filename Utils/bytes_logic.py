@@ -32,6 +32,16 @@ def circular_left_shit(num: int, shift: int, bit_size: int = 32):
     return shifted | reminder
 
 
+def lrot(value, n):
+    lbits, rbits = (value << n) & 0xFFFFFFFF, value >> (32 - n)
+    return lbits | rbits
+
+
+def rrot(value, n):
+    lbits, rbits = (value << (32-n)) & 0xFFFFFFFF, value >> n
+    return lbits | rbits
+
+
 if __name__ == '__main__':
     res = xor_bytes((bytes([5, 2, 1, 4]), bytes([1, 2, 3, 6])))
     print(res)
