@@ -34,9 +34,9 @@ Next, we create the API Server and the web client.
 
 Note: 
     
-- The Server and WebClient shares a secret key.
+- The Server and WebClient share a secret key.
     
-- WebClient uses user_id=1 which is the identity of the attacker. That way, the attacker can generate valid messages only for accounts he controls.
+- WebClient uses user_id=1 which is the identity of the attacker. That way, the attacker can generate valid messages only for the accounts he controls.
 
 ```python
 class Server:
@@ -70,7 +70,7 @@ class WebClient:
         return Request(msg=msg, iv=iv, mac=mac)
 ```
 
-Now, as the attacker, we want to craft legitimate request with our choice of parametes.
+Now, as the attacker, we want to craft legitimate requests with our choice of parameters.
 
 In this case, the attacker has control over the IV, and thus full control over the first block of the message.
 
@@ -111,7 +111,7 @@ server.process_request(attack_request)  # SERVER: transfer approved - from=#03&t
 
 Now, the IV is fixed, and the attacker can't use it to forge messages.
 
-We update WebClient and add support for muliple transactions in a single request:
+We update WebClient and add support for multiple transactions in a single request:
 ```python
 class WebClient:
     def __init__(self, key: bytes):
@@ -133,7 +133,7 @@ The message will have the form: `from=#TARGET_ID&tx_list=#{transactions}`
 
 As the attacker, we can generate valid message of the form: `from=#ATTACKER_ID_ID&tx_list=#{transactions}`
 
-We will use length extension attack to combine these two messages.
+We will use a length extension attack to combine these two messages.
 
 Imagine the target message blocks are:
 
@@ -143,7 +143,7 @@ And the corresponding cipher blocks:
 
 CT0 = E(TM0 + IV) | CT1 = E(TM1 + CT0) | MAC_T = CT2 = E(TM2 + CT1)
 
-The same way, the attacker message and cipher blocks:
+In the same way, the attacker message and cipher blocks:
 
 AM0 | AM1 | AM2
 
@@ -153,7 +153,7 @@ We can forge the following message:
 
 TM0 | TM1 | padd(TM2) | AM0 + MAC_T | AM1 | AM2
 
-And it's CBC MAC will be the same as MAC_A.
+And its CBC MAC will be the same as MAC_A.
 
 ```python
 def gen_attack_request(target_request: Request, attacker_request: Request):
@@ -191,7 +191,7 @@ server.process_request(forged_request)
 ## SERVER: transfer approved - b'from=#02&tx_list=#06:789;09:321\x011\xe7\x8aK\x8ar\x83\x8a\x8e1Q;j\x05\xebE=#01:1000000'
 ```
 
-As we can see, the *overlap_block* has no meaning, but we were able to add a transction to the end of the list.
+As we can see, the *overlap_block* has no meaning, but we were able to add a transaction to the end of the list.
 
 
 
@@ -205,9 +205,9 @@ With CBC-MAC = `296b8d7cb78a243dda4d0a61d33bbdd1`
 
 Our goal is to create a JS snippet that alerts "Ayo, the Wu is back!" and hashes to the same value.
 
-We can use length extension attack like we did in the last challenge - building a message that starts with our new message, and append the previous message, such that the MAC is preserved.
+We can use a length extension attack as we did in the last challenge - building a message that starts with our new message, and append the previous message, such that the MAC is preserved.
 
-We start with the desired snippet (the comment allow us to append the snippet without affecting the excecution):
+We start with the desired snippet (the comment allows us to append the snippet without affecting the execution):
 ```python
 # forged mac
 new_msg = b"alert('Ayo, the Wu is back!');" + b'//'
@@ -290,9 +290,9 @@ Our target is to evaluate the *sessionid*.
 
 We use Compression Side Channel Attacks:
 
-*In compression algorithms any phrase that is repeated gets stored once. This means that if a certain string of characters is repeated somewhere in the text, it is only stored the first time. The second time it occurs as a reference to the first occurrence, therefore when a text occurs multiple times it is very efficiently compressed so the size is smaller. This characteristic can be used in a compression side channel attack.* (https://www.venafi.com/blog/what-are-compression-side-channel-attacks)
+*In compression algorithms any phrase that is repeated gets stored once. This means that if a certain string of characters is repeated somewhere in the text, it is only stored the first time. The second time it occurs as a reference to the first occurrence, therefore when a text occurs multiple times it is very efficiently compressed so the size is smaller. This characteristic can be used in a compression side-channel attack.* (https://www.venafi.com/blog/what-are-compression-side-channel-attacks)
 
-So, when the enctyption is a stream cipher, the length of the response reveals the exact plain text length. In order to decode the sessionid, we loop one byte at a time and look for the shortest encryption. (In order to avoid oulier cases, we make sure only one byte correspond to the shortest length):
+So, when the encryption is a stream cipher, the length of the response reveals the exact plain text length. To decode the sessionid, we loop one byte at a time and look for the shortest encryption. (To avoid outlier cases, we make sure only one byte corresponds to the shortest length):
 ```python
 def decode_session_id(oracle: CompressionOracle):
     # consts
@@ -338,7 +338,7 @@ assert session_id == SESSION_ID
 ---
 Now, we use CBC (Block Cipher) to encrypt the response. This time, the response may not be aligned at the end of the block, and the block will hide the exact plain text length.
 
-In order to deal with it, we align the response to a tipping point, by brute forcing all posible padding lengths.
+To deal with it, we align the response to a tipping point, by brute-forcing all possible padding lengths.
 
 The updated *decode_session_id* become:
 ```python
@@ -423,7 +423,7 @@ According to the [Birthday Paradox](https://en.wikipedia.org/wiki/Birthday_probl
 
 To narrow down the search, we use [Joux’s multicollision attack](https://cs.uwaterloo.ca/~dstinson/Pyth4.pdf).
 
-The idea is to find $n$ successive collisions in the compression function, each of which requires time $\Theta(2^{b/2})$, resulting in total of $\Theta(n \cdot 2^{b/2})$ .
+The idea is to find $n$ successive collisions in the compression function, each of which requires time $\Theta(2^{b/2})$, resulting in a total of $\Theta(n \cdot 2^{b/2})$ .
 
 The attack: we find the following collisions (total of n collisions) - 
 
@@ -441,7 +441,7 @@ $$ \{y_{1}^{1},y_{1}^{2}\} \times \{y_{2}^{1},y_{2}^{2}\} \times ... \times \{y_
 
 is a $2^{n}$ multicollision.
 
-For the attack we need a function that search for a single collision in $\Theta(2^{b/2})$ time. ([more about the function comlexity](https://www.learnpythonwithrune.org/birthday-paradox-and-hash-function-collisions-by-example/))
+For the attack, we need a function that searches for a single collision in $\Theta(2^{b/2})$ time. ([more about the function comlexity](https://www.learnpythonwithrune.org/birthday-paradox-and-hash-function-collisions-by-example/))
 ```python
 def find_collision(state: bytes, state_size: int):
     """
@@ -493,9 +493,9 @@ print(f'{all_collide=}')  # all_collide=True
 
 ---
 
-In the second part of the challenge we need to find collision to h(x) = f(x) || g(x).
+In the second part of the challenge, we need to find collision to h(x) = f(x) || g(x).
 
-Instead of looking for collisions in h(x), we can generate collisions in f(x) (the cheaper hash funcion) and check for collision in g(x).
+Instead of looking for collisions in h(x), we can generate collisions in f(x) (the cheaper hash function) and check for collision in g(x).
 
 We use f(x) with output size of 16 bits, and g(x) with output size of 32 bit:
 ```python
@@ -547,7 +547,7 @@ There were 400 calls to the collision function.
 
 The challenge is based on the paper [Second Preimages on n-bit Hash Functions for Much Less than 2^n Work](https://www.schneier.com/wp-content/uploads/2016/02/paper-preimages.pdf).
 
-We update Merkle-Damgard hash function to have a secure padding:
+We update Merkle-Damgard hash function to have secure padding:
 ```python
 def merkle_damgard_aes128(msg: bytes, state: bytes, state_size: int, add_len_pad: bool = True) -> bytes:
     if len(state) != state_size:
@@ -579,13 +579,13 @@ def merkle_damgard_aes128(msg: bytes, state: bytes, state_size: int, add_len_pad
     return state
 ```
 
-For the attack we need to implement *Expandable Message*. This is actually a set of messages of length $(k, k + 2^{k} - 1)$ with the same hash value.
+For the attack, we need to implement *Expandable Message*. This is actually a set of messages of length $(k, k + 2^{k} - 1)$ with the same hash value.
 
-Using these messages, we can choose a prefix with length of our own choice with known hash result.
+Using these messages, we can choose a prefix with a length of our own choice with a known hash result.
 
-We start with with a function that find a collision between 1-block message and a message of $\alpha = 2^{(k-j)}+1$ blocks.
+We start with a function that finds a collision between 1-block message and a message of $\alpha = 2^{(k-j)}+1$ blocks.
 
-Note - this function has to efficient (birthday paradox), otherwise the whole search would be pointless and we would get stuck here. 
+Note - this function has to be efficient (birthday paradox), otherwise the whole search would be pointless and we would get stuck here. 
 
 For efficiency, we constructs about $2^{n/2}$ messages of length
 1, and about the same number of length $\alpha$ , and looks for a collision:
@@ -627,7 +627,7 @@ def find_collision(state: bytes, k: int, j: int):
                 return m1, m2, hash_out
 ```
 
-Then, we create *ExpandableMessage* class which generate the discussed set, and produce a message with length of our own choice:
+Then, we create *ExpandableMessage* class which generates the discussed set, and produce a message with a length of our own choice:
 ```python
 class ExpandableMessage:
     def __init__(self, k: int, initial_state: bytes):
@@ -661,8 +661,8 @@ class ExpandableMessage:
 
 Now, the attack goes like this:
 - Save the hash value of intermediate blocks of the message.
-- Find a collision between a *bridged* block to one of the saved hash values from previus step.
-- Build a forged message with the length of the original message. The forged message contain a prefix (which derive from the expandable message), the bridged block, and the second part of the original image.
+- Find a collision between a *bridged* block to one of the saved hash values from the previus step.
+- Build a forged message with the length of the original message. The forged message contains a prefix (which derives from the expandable message), the bridged block, and the second part of the original image.
 
 ```python
 def preimage_attack(msg: bytes, initial_state: bytes):
@@ -730,7 +730,7 @@ assert merkle_damgard_aes128(forged_msg, initial_state, state_size) == msg_hash
 
 We found a collision for a state of 32 bit long in just a few seconds !!! 
 
-Using a naive approche would require $2^n = 4,294,967,296$ iterations.
+Using a naive approach would require $2^n = 4,294,967,296$ iterations.
 
 
 
@@ -744,12 +744,12 @@ Kelsey and Kohno (2006) described the following hash function property, presente
 
 *Chosen-target-forced-prefix resistance - An attacker commits to a message digest, z, and is then challenged with a prefix, P. It should be infeasible for the attacker to be able to find a suffix S such that hash(P k S) = z.* ([source](https://cs.uwaterloo.ca/~dstinson/Pyth4.pdf))
 
-In this challenge we implement an attack that violates CTFP resistance agianst Merkle-Damgard hash functions (often called a herding attack).
+In this challenge, we implement an attack that violates CTFP resistance against Merkle-Damgard hash functions (often called a herding attack).
 
 The attack uses a precomputed data structure called a diamond structure: 
 - A 2^k-diamond structure contains a complete binary tree of depth k. 
 - Every edge $e$ in the diamond structure is labeled by a string $σ(e)$ and consist one message block.
-- Each node $N$ in the structure correspond to the hash of the concatinated messages on the path from the source node to the node $N$ in the diamond structure.
+- Each node $N$ in the structure correspond to the hash of the concatenated messages on the path from the source node to the node $N$ in the diamond structure.
 - At any level $l$ of the structure there are $2^{k−l}$ hash values.
 - These values must be paired, such that, when the next message blocks are appended, $2^{k−l−1}$ collisions occur.
 
@@ -829,7 +829,7 @@ Back to our problem of *proof of a secret prediction*:
 
 - We commit to the hash value that appears at the root of the diamond structure (after padding the message length).
 - Then, a challenger provides a prefix $P$.
-- We generate glue blocks such that the last block collide into one of the leaves in the tree.
+- We generate glue blocks such that the last block collides with one of the leaves in the tree.
 - Finally, we follow the path from the leaf all the way up to the root node, and build the prediction using the message blocks along the way.
 
 ```python
@@ -914,28 +914,144 @@ Note that the suffix length is only $k+1$ blocks long.
 
 The challenge is based on the paper [Cryptanalysis of the Hash Functions MD4 and RIPEMD](https://link.springer.com/chapter/10.1007/11426639_1).
 
+(*Fort & Forge* wrote an excellent [writeup](https://fortenf.org/e/crypto/2017/09/10/md4-collisions.html) for this challenge)
+
+In this challenge we find MD4 collisions using Wang's attack. Given a message block M, Wang outlines a strategy for finding a sister message block M', differing only in a few bits, that will collide with it. Just so long as a short set of conditions holds true for M.
+
+The attack starts with generating a *weak message* according to Wang demands (Table. 6 in the paper).
+
+### Single-Step Modification
+In Round 1, each state variable depends on a different message block, and we can modify each state variable without affecting the others.
+
+For example, we have the following constraints on c1:
+`c1,7 = 1, c1,8 = 1, c1,11 = 0, c1,26 = d1,26`
+
+To enforce these constraints, we follow the steps:
+- Compute the original value of c1
+
+$$ c_{1} = \phi_{1}(c,d,a,b,m_{2},11) $$
+
+- Correct the relevant bits of c1 to match the constraints
+
+$$ c_{1,7}' = c_{1,7} \oplus (c_{1,7} \oplus 1) $$
+
+$$ c_{1,8}' = c_{1,8} \oplus (c_{1,8} \oplus 1) $$
+
+$$ c_{1,11}' = c_{1,11} \oplus (c_{1,11} \oplus 0) $$
+
+$$ c_{1,26}' = c_{1,26} \oplus (c_{1,26} \oplus d_{1,26}) $$
+
+- Evaluate the corresponding message block that will reproduce c1
+
+$$ m_{2} = \phi_{1}^{-1}(c,d,a,b,c_{1}',11) $$
 
 
+For the implementation of first-round constraints we create some helper functions:
+```python
+def phi1(a, b, c, d, m, s): return lrot(a + f(b, c, d) + m, s)
+def phi1_inv(a, b, c, d, next_a, s): return (rrot(next_a, s) - a - f(b, c, d)) & 0xFFFFFFFF
 
+def phi1_constrained(a, b, c, d, m, m_idx, s, constraints: list[Constraint]):
+    # eval next a
+    next_a = phi1(a, b, c, d, m[m_idx], s)
 
+    # loop constraints
+    for con in constraints:
+        if con.type == 'eq':
+            next_a ^= (next_a & (1 << con.src_bit)) ^ (b & (1 << con.src_bit))
+        elif con.type == 'zero':
+            next_a ^= (next_a & (1 << con.src_bit)) ^ 0
+        elif con.type == 'one':
+            next_a ^= (next_a & (1 << con.src_bit)) ^ (1 << con.src_bit)
+        else:
+            raise Exception
 
+    # fix message block
+    m[m_idx] = phi1_inv(a, b, c, d, next_a, s) & 0xFFFFFFFF
+    return next_a
+```
 
+Then we can enforce the constraints like so (for example):
+```python
+# step 3: c1,7 = 1, c1,8 = 1, c1,11 = 0, c1,26 = d1,26
+constraints = [Constraint(type='one', src_bit=6),
+                Constraint(type='one', src_bit=7),
+                Constraint(type='zero', src_bit=10),
+                Constraint(type='eq', src_bit=25)]
 
+c = phi1_constrained(c, d, a, b, m, 2, 11, constraints)
+```
 
+### Multi-Step Modification
+The problem with Round 2 constraints is that they reuse message blocks from Round 1. That way, if we modify the message blocks to hold for Round 2 constraints, the state variables of Round 1 will be changed too.
 
+To deal with that problem, we also modify successive message blocks, such that the following state variables will not change.
 
+For example, to enforce a5 constraints, we need to modify m0. 
 
+If we change m0, a1 will also get changed, and so the state variables that depend on it (d1, c1, b1, a2).
 
+The solution is to modify (m1, m2, m3, m4) such that only a1 will get changed, but (d1, c1, b1, a2) will remain the same.
 
+```python
+# a5 constraints
+a5 = phi2(a, b, c, d, m[0], 3)
+a5 ^= (a5 & (1 << 18)) ^ (c & (1 << 18))  # a5,19 = c4,19
+a5 ^= (a5 & (1 << 25)) ^ (1 << 25)  # a5,26 = 1
+a5 ^= (a5 & (1 << 26)) ^ 0  # a5,27 = 0
+a5 ^= (a5 & (1 << 28)) ^ (1 << 28)  # a5,29 = 1
+a5 ^= (a5 & (1 << 31)) ^ (1 << 31)  # a5,32 = 1
 
+# fix message block
+m[0] = phi2_inv(a, b, c, d, a5, 3)
+a_vec[1] = phi1(a_vec[0], b_vec[0], c_vec[0], d_vec[0], m[0], 3)
 
+# update message according to the new state
+m[1] = phi1_inv(d_vec[0], a_vec[1], b_vec[0], c_vec[0], d_vec[1], 7)
+m[2] = phi1_inv(c_vec[0], d_vec[1], a_vec[1], b_vec[0], c_vec[1], 11)
+m[3] = phi1_inv(b_vec[0], c_vec[1], d_vec[1], a_vec[1], b_vec[1], 19)
+m[4] = phi1_inv(a_vec[1], b_vec[1], c_vec[1], d_vec[1], a_vec[2], 3)
+```
 
+### Finding Collision
+After we have some *weak message*, we can use Wang condition to find a collision:
 
+```python
+def find_collision():
+    while True:
+        # generate weak message
+        src = generate_weak_message()
+        src_unpack = list(struct.unpack("<16I", src))
 
+        # create collision message
+        new_msg = src_unpack.copy()
+        new_msg[1] = (new_msg[1] + (2 ** 31)) & 0xFFFFFFFF
+        new_msg[2] = (new_msg[2] + (2 ** 31) - (2 ** 28)) & 0xFFFFFFFF
+        new_msg[12] = (new_msg[12] - (2 ** 16)) & 0xFFFFFFFF
+        new_msg = struct.pack("<16I", *new_msg)
 
+        # check for collision
+        hash1 = MD4.new(src).digest()
+        hash2 = MD4.new(new_msg).digest()
 
+        if hash1 == hash2:
+            return src, new_msg, hash1
+```
 
+We run the following lines:
+```python
+m1, m2, hash_collision = find_collision()
+print(f'{m1.hex()=}') 
+print(f'{m2.hex()=}')
+print(f'{hash_collision.hex()=}')
+```
+ And we find MD4 collision in just a few seconds !!!
 
+``` python
+m1.hex()='122d89dcf3c93c0f6d9c5493ed9f11f23f7b7cbe648f6c262f45439b4b0a8d0ca35c8066931ac2e33b7f0bf4b906d4bf324b00ddb375c20a207793f1977718c5'
+m2.hex()='122d89dcf3c93c8f6d9c5403ed9f11f23f7b7cbe648f6c262f45439b4b0a8d0ca35c8066931ac2e33b7f0bf4b906d4bf324bffdcb375c20a207793f1977718c5'
+hash_collision.hex()='5d6c70e2a24ffdccbc5c5c9b67a45bd0'
+```
 
 
 

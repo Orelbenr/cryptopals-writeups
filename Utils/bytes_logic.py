@@ -33,13 +33,15 @@ def circular_left_shit(num: int, shift: int, bit_size: int = 32):
 
 
 def lrot(value, n):
+    value = value & 0xFFFFFFFF
     lbits, rbits = (value << n) & 0xFFFFFFFF, value >> (32 - n)
-    return lbits | rbits
+    return (lbits | rbits) & 0xFFFFFFFF
 
 
 def rrot(value, n):
+    value = value & 0xFFFFFFFF
     lbits, rbits = (value << (32-n)) & 0xFFFFFFFF, value >> n
-    return lbits | rbits
+    return (lbits | rbits) & 0xFFFFFFFF
 
 
 if __name__ == '__main__':
