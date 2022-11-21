@@ -522,21 +522,21 @@ $$ 2 \cdot m \mod n $$
 
 there are two possibilities:
 
-1) In case that: 
+### In case that:
 
-    $$ 2 \cdot m < n $$
+$$ 2 \cdot m < n $$
 
-    $$ m < \dfrac{n}{2} $$
+$$ m < \dfrac{n}{2} $$
 
-    the message won't wrap the modulus, and the parity bit will indicate *even*.
+the message won't wrap the modulus, and the parity bit will indicate *even*.
 
-2) In case that:
+### In case that:
 
-    $$ 2 \cdot m > n $$
+$$ 2 \cdot m > n $$
 
-    $$ m > \dfrac{n}{2} $$
+$$ m > \dfrac{n}{2} $$
 
-    the message will wrap the modulus, and the parity bit will indicate *odd* (since n is a prime number).
+the message will wrap the modulus, and the parity bit will indicate *odd* (since n is a prime number).
 
 Using $\log_{2}{n}$ iterations of this approach, we can narrow down the possible values of *m* to one:
 
