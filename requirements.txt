@@ -3,3 +3,4 @@ tqdm
 numpy
 requests
 Flask
+matplotlib

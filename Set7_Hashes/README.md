@@ -131,7 +131,7 @@ Assume we can capture a valid message from the target user.
 
 The message will have the form: `from=#TARGET_ID&tx_list=#{transactions}`
 
-As the attacker, we can generate valid message of the form: `from=#ATTACKER_ID_ID&tx_list=#{transactions}`
+As the attacker, we can generate a valid message of the form: `from=#ATTACKER_ID_ID&tx_list=#{transactions}`
 
 We will use a length extension attack to combine these two messages.
 
@@ -168,7 +168,7 @@ def gen_attack_request(target_request: Request, attacker_request: Request):
     return Request(msg=new_msg, mac=attacker_request.mac)
 ```
 
-We can use the attack the following way:
+We can use the attack in the following way:
 ```python
 ATTACKER_ID = 1
 TARGET_ID = 2
@@ -205,7 +205,7 @@ With CBC-MAC = `296b8d7cb78a243dda4d0a61d33bbdd1`
 
 Our goal is to create a JS snippet that alerts "Ayo, the Wu is back!" and hashes to the same value.
 
-We can use a length extension attack as we did in the last challenge - building a message that starts with our new message, and append the previous message, such that the MAC is preserved.
+We can use a length extension attack as we did in the last challenge - building a message that starts with our new message and appending the previous message, such that the MAC is preserved.
 
 We start with the desired snippet (the comment allows us to append the snippet without affecting the execution):
 ```python
@@ -213,7 +213,7 @@ We start with the desired snippet (the comment allows us to append the snippet w
 new_msg = b"alert('Ayo, the Wu is back!');" + b'//'
 ```
 
-Now, we look for a block to append the msg which will result in ascii compliance:
+Now, we look for a block to append the msg which will result in ASCII compliance:
 ```python
 while True:
     suffix = bytes([random.randint(33, 127) for _ in range(AES_BLOCK_SIZE)])
@@ -661,7 +661,7 @@ class ExpandableMessage:
 
 Now, the attack goes like this:
 - Save the hash value of intermediate blocks of the message.
-- Find a collision between a *bridged* block to one of the saved hash values from the previus step.
+- Find a collision between a *bridged* block to one of the saved hash values from the previous step.
 - Build a forged message with the length of the original message. The forged message contains a prefix (which derives from the expandable message), the bridged block, and the second part of the original image.
 
 ```python
@@ -728,7 +728,7 @@ forged_msg = preimage_attack(msg, initial_state)
 assert merkle_damgard_aes128(forged_msg, initial_state, state_size) == msg_hash
 ```
 
-We found a collision for a state of 32 bit long in just a few seconds !!! 
+We found a collision for a state of 32-bit long in just a few seconds !!! 
 
 Using a naive approach would require $2^n = 4,294,967,296$ iterations.
 
@@ -1059,3 +1059,167 @@ hash_collision.hex()='5d6c70e2a24ffdccbc5c5c9b67a45bd0'
 
 > Challenge: https://cryptopals.com/sets/7/challenges/56
 
+The challenge is based on the paper [On the Security of RC4 in TLS and WPA](http://www.isg.rhul.ac.uk/tls/RC4biases.pdf).
+
+### The Setup
+*Picture this scenario: you want to steal a user's secure cookie. You can spawn arbitrary requests (from a malicious plugin or somesuch) and monitor network traffic.*
+
+To model the scenario, we build an encryption oracle of the form `RC4(request || cookie, random-key)`:
+```python
+class RC4Oracle:
+    cookie = base64.b64decode('QkUgU1VSRSBUTyBEUklOSyBZT1VSIE9WQUxUSU5F')
+
+    @classmethod
+    def monitor(cls, request: bytes):
+        key = get_random_bytes(KEY_SIZE)
+        data = request + cls.cookie
+
+        cipher = ARC4.new(key)
+        msg = cipher.encrypt(data)
+        return msg
+```
+
+### Single-Byte Bias Attack
+This attack targets the initial 256 bytes of RC4 ciphertext. It is fixed-plaintext and multisession, meaning that it requires a fixed sequence of plaintext bytes to be independently encrypted under a large number of (random) keys.
+
+The attack exploits statistical biases occurring in the first 256 bytes of RC4 keystream. 
+
+For example (as stated in the paper), there is a bias towards the values $r, 256-r$ for all $r$ at positions $r$ that are multiples of (key-length) $16$.
+
+### Building Bias Maps
+Denote $Z_{r}$ , the r-th byte of keystream output by RC4.
+
+We start with obtaining a detailed picture of the distributions of RC4 keystream bytes $Z_{r}$ , for some selected positions of $r$ , by gathering statistics from keystreams generated using a large number of independent keys. 
+
+That is, for selected values of $r$ , we estimate:
+
+$$ p_{r,k} = Pr(Zr = k) ; k = 0x00,...,0xFF $$
+
+where the probability is taken over the random choice of the RC4 encryption key (128-bit keys in our case).
+
+We use the following code to estimate the bias maps for $r=16,32$ :
+```python
+def build_bias_maps(r_list: list[int], num_repetitions: int) -> np.ndarray:
+    """
+    Estimate distribution of RC4 key stream bytes Zr
+    :param num_repetitions: number of independent keys for the statistics
+    :param r_list: list of r, such that r in (1, 256) r-th byte of key stream output by RC4
+    :return: np.ndarray of dists.
+    """
+    if not all(map(lambda r: 1 <= r <= 256, r_list)):
+        raise ValueError('r should be in range 1-256')
+
+    # store distribution of Zr for all r
+    hist = np.zeros((len(r_list), 256))
+
+    # eval distribution
+    max_r = max(r_list)
+    r_list_len = len(r_list)
+    for _ in tqdm(range(num_repetitions), miniters=1e5):
+        key = random.randbytes(KEY_SIZE)
+        cipher = ARC4.new(key)
+        key_stream = cipher.encrypt(bytes(max_r))
+
+        for j in range(r_list_len):
+            hist[j, key_stream[r_list[j]-1]] += 1
+
+    # normalize dist
+    hist = hist / num_repetitions
+    return hist
+```
+
+And we get the following distributions for num_repetitions=2^30:
+![](../docs/challenge_56_stat1.png)
+![](../docs/challenge_56_stat2.png)
+
+
+### Recovering the Plaintext Using Maximum-Likelihood Approach
+For a fixed position $r$ and plaintext byte $\mu$ for that position, define:
+
+$$ N^{(\mu)}_{k} = | \{ j \in [1,S]| C_{j,r} = k \oplus \mu \} | $$
+
+$$ (0x00 ≤ k ≤ 0xFF) $$
+
+We have $S$ ciphertexts $C_{1},...,C_{S}$ , and we look at the following probabilty:
+
+$$ P(N^{(\mu)}_{0},...,N^{(\mu)}_{0xFF} | \mu) $$
+
+We can model the distribution as *Multinomial Distribution* using the biases $p_{r,k}$ from last step: 
+- There are $S$ experiment with 0xFF possible outcomes.
+- The probabilty for outcome $j$ is $p_{r,j}$ and is counted as $N^{(\mu)}_{j}$
+
+The probability mass function of this multinomial distribution is:
+
+$$ P(N^{(\mu)}_{0},...,N^{(\mu)}_{0xFF} | \mu) = \frac{S!}{N^{(\mu)}_{0}! \cdots N^{(\mu)}_{0xFF}!} \prod_{k=0}^{0xFF} p_{r,k}^{N^{(\mu)}_{k}} $$
+
+We wish to estimate $\mu$ using MLE approach:
+
+$$ \hat{\mu} = \argmax_{\mu} P(N^{(\mu)}_{0},...,N^{(\mu)}_{0xFF} | \mu) $$ 
+
+Note that $N^{(\mu)}_{k} = N^{(\mu')}_{k \oplus \mu' \oplus \mu}$ for all $k$ , and thus the first term of the distribution is identical for different $\mu$ values and can be discarded.
+
+We get:
+
+$$ \hat{\mu} = \argmax_{\mu} P(N^{(\mu)}_{0},...,N^{(\mu)}_{0xFF} | \mu) $$ 
+
+$$ = \argmax_{\mu} \frac{S!}{N^{(\mu)}_{0}! \cdots N^{(\mu)}_{0xFF}!} \prod_{k=0}^{0xFF} p_{r,k}^{N^{(\mu)}_{k}} $$ 
+
+$$ = \argmax_{\mu} \prod_{k=0}^{0xFF} p_{r,k}^{N^{(\mu)}_{k}} $$ 
+
+$$ = \argmax_{\mu} \sum_{k=0}^{0xFF} N^{(\mu)}_{k} \cdot \log{(p_{r,k})}  $$ 
+
+We create a function that estimates $\mu$ for a fixed position $r$ :
+```python
+def estimate_byte(cipher_seq, p_rk: np.ndarray) -> int:
+    """
+    Single-byte bias attack
+    :param cipher_seq: C(j,r); 1≤j≤S - S independent encryption's of fixed plaintext P at byte r
+    :param p_rk: p(r,k) - list of probabilities of the distribution at position r
+    :return: estimate for plaintext byte Pr
+    """
+    # distribution of C(j,r)
+    c_dist = np.zeros(256, dtype=np.uint32)
+    for c_val in cipher_seq:
+        c_dist[c_val] += 1
+
+    # eval mu using MLE (as discussed in the README)
+    k_vec = np.arange(256)
+    mu_hat = np.argmax([np.sum(c_dist[k_vec ^ mu] * np.log10(p_rk)) for mu in range(256)])
+    return mu_hat
+```
+
+Then, we estimate the entire cookie by shifting its location, and placing the wanted byte at $Z_{16}$ or $Z_{32}$ :
+```python
+def bias_attack(bias_maps: np.ndarray, num_rep: int):
+    oracle = RC4Oracle
+
+    cookie_evaluation = []
+    # Eval bytes 0-15 using Z16
+    for byte_idx in range(16):
+        pad_len = 15-byte_idx
+        req = b'A' * pad_len
+
+        cipher_seq = (oracle.monitor(req)[15] for _ in range(num_rep))  # generate Cj,16
+        byte_estimate = estimate_byte(cipher_seq, bias_maps[0])  # bias_maps of r=16
+        cookie_evaluation.append(byte_estimate)
+
+    # Eval bytes 16-30 using Z32
+    for byte_idx in range(14):
+        pad_len = 15 - byte_idx
+        req = b'A' * pad_len
+
+        cipher_seq = (oracle.monitor(req)[31] for _ in range(num_rep))  # generate Cj,32
+        byte_estimate = estimate_byte(cipher_seq, bias_maps[1])  # bias_maps of r=32
+        cookie_evaluation.append(byte_estimate)
+
+    return bytes(cookie_evaluation)
+```
+
+Finally, we can decrypt the cookie:
+```python
+# run single-byte bias attack
+cookie = bias_attack(hist, num_rep=int(2**24))
+print(f'{cookie=}')  # cookie=b'BE SURE TO DRINK YOUR OVALTINE'
+```
+
+And just like that, we have the cookie plaintext !!!
