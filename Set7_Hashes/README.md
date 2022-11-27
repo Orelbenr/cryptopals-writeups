@@ -1136,37 +1136,41 @@ And we get the following distributions for num_repetitions=2^30:
 ### Recovering the Plaintext Using Maximum-Likelihood Approach
 For a fixed position $r$ and plaintext byte $\mu$ for that position, define:
 
-$$ N^{(\mu)}_{k} = | \{ j \in [1,S]| C_{j,r} = k \oplus \mu \} | $$
+$$ N^{(\mu)}_{k} = | \{ j \in [1,S]: C_{j,r} = k \oplus \mu \} | $$
 
 $$ (0x00 ≤ k ≤ 0xFF) $$
 
 We have $S$ ciphertexts $C_{1},...,C_{S}$ , and we look at the following probabilty:
 
-$$ P(N^{(\mu)}_{0},...,N^{(\mu)}_{0xFF} | \mu) $$
+$$ P(N_{0}^{(\mu)},...,N_{0xFF}^{(\mu)} | \mu) $$
 
 We can model the distribution as *Multinomial Distribution* using the biases $p_{r,k}$ from last step: 
 - There are $S$ experiment with 0xFF possible outcomes.
-- The probabilty for outcome $j$ is $p_{r,j}$ and is counted as $N^{(\mu)}_{j}$
+- The probabilty for outcome $j$ is $p_{r,j}$ and is counted as $N_{j}^{(\mu)}$
 
 The probability mass function of this multinomial distribution is:
 
-$$ P(N^{(\mu)}_{0},...,N^{(\mu)}_{0xFF} | \mu) = \frac{S!}{N^{(\mu)}_{0}! \cdots N^{(\mu)}_{0xFF}!} \prod_{k=0}^{0xFF} p_{r,k}^{N^{(\mu)}_{k}} $$
+$$ P(N_{0}^{(\mu)},...,N_{0xFF}^{(\mu)} | \mu) = \frac{S!}{N_{0}^{(\mu)}! \cdots N_{0xFF}^{(\mu)}!} \prod_{k=0}^{0xFF} p_{r,k}^{N_{k}^{(\mu)}} $$
 
 We wish to estimate $\mu$ using MLE approach:
 
-$$ \hat{\mu} = \argmax_{\mu} P(N^{(\mu)}_{0},...,N^{(\mu)}_{0xFF} | \mu) $$ 
+$$ \hat{\mu} = \underset{\mu}{\operatorname{argmax}} P(N_{0}^{(\mu)},...,N_{0xFF}^{(\mu)} | \mu) $$ 
 
-Note that $N^{(\mu)}_{k} = N^{(\mu')}_{k \oplus \mu' \oplus \mu}$ for all $k$ , and thus the first term of the distribution is identical for different $\mu$ values and can be discarded.
+Note that -
+
+$$ N_{k}^{(\mu)} = N_{k \oplus \mu' \oplus \mu}^{(\mu')} $$ 
+
+for all $k$ , and thus the first term of the distribution is identical for different $\mu$ values and can be discarded.
 
 We get:
 
-$$ \hat{\mu} = \argmax_{\mu} P(N^{(\mu)}_{0},...,N^{(\mu)}_{0xFF} | \mu) $$ 
+$$ \hat{\mu} = \underset{\mu}{\operatorname{argmax}} P(N_{0}^{(\mu)},...,N_{0xFF}^{(\mu)} | \mu) $$ 
 
-$$ = \argmax_{\mu} \frac{S!}{N^{(\mu)}_{0}! \cdots N^{(\mu)}_{0xFF}!} \prod_{k=0}^{0xFF} p_{r,k}^{N^{(\mu)}_{k}} $$ 
+$$ = \underset{\mu}{\operatorname{argmax}} \frac{S!}{N_{0}^{(\mu)}! \cdots N_{0xFF}^{(\mu)}!} \prod_{k=0}^{0xFF} p_{r,k}^{N_{k}^{(\mu)}} $$ 
 
-$$ = \argmax_{\mu} \prod_{k=0}^{0xFF} p_{r,k}^{N^{(\mu)}_{k}} $$ 
+$$ = \underset{\mu}{\operatorname{argmax}} \prod_{k=0}^{0xFF} p_{r,k}^{N_{k}^{(\mu)}} $$ 
 
-$$ = \argmax_{\mu} \sum_{k=0}^{0xFF} N^{(\mu)}_{k} \cdot \log{(p_{r,k})}  $$ 
+$$ = \underset{\mu}{\operatorname{argmax}} \sum_{k=0}^{0xFF} N_{k}^{(\mu)} \cdot \log{(p_{r,k})}  $$ 
 
 We create a function that estimates $\mu$ for a fixed position $r$ :
 ```python
