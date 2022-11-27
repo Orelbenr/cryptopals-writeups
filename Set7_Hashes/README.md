@@ -1136,7 +1136,7 @@ And we get the following distributions for num_repetitions=2^30:
 ### Recovering the Plaintext Using Maximum-Likelihood Approach
 For a fixed position $r$ and plaintext byte $\mu$ for that position, define:
 
-$$ N^{(\mu)}_{k} = | \{ j \in [1,S]: C_{j,r} = k \oplus \mu \} | $$
+$$ N_{k}^{(\mu)} = | \{ j \in [1,S]: C_{j,r} = k \oplus \mu \} | $$
 
 $$ (0x00 ≤ k ≤ 0xFF) $$
 
