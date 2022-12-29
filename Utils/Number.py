@@ -1,3 +1,6 @@
+from functools import reduce
+from typing import Iterator
+
 
 def power_mod(b, e, m):
     """
@@ -15,7 +18,7 @@ def power_mod(b, e, m):
     return res
 
 
-def extended_gcd(a: int, b: int) -> tuple:
+def extended_gcd(a: int, b: int) -> tuple[int, tuple[int, int]]:
     """
     Extended Euclidean algorithm
     :return: ( 'gcd' - the resulting gcd,
@@ -73,12 +76,50 @@ def integer_division_ceil(a: int, b: int) -> int:
     return (a + b - 1) // b
 
 
-if __name__ == '__main__':
-    # gcd, coeffs = extended_gcd(240, 46)
-    # print(gcd, coeffs)
-    #
-    # inv = invmod(17, 3120)
-    # print(inv)
+def trial_division(n: int) -> Iterator[int]:
+    """
+    Basic Integer Factorization Algorithm.
+    https://en.wikipedia.org/wiki/Trial_division
+    """
+    while n % 2 == 0:
+        yield 2
+        n //= 2
 
-    res = invpow_integer(65, 3)
-    print(res)
+    f = 3
+    while f * f <= n:
+        if n % f == 0:
+            yield f
+            n //= f
+        else:
+            f += 2
+
+    if n != 1:
+        yield n
+
+
+def chinese_remainder(n_list: list[int], a_list: list[int]) -> int:
+    """
+    Solution of the system:
+    x = a1 (mod n1)
+    x = a2 (mod n2)
+    ...
+    x = ak (mod k)
+
+    Such that 0 <= x < N,
+    where N = n1 * n2 * ... * nk
+
+    https://en.wikipedia.org/wiki/Chinese_remainder_theorem#Existence_(direct_construction)
+    """
+    x = 0
+    N = reduce(lambda a, b: a * b, n_list)
+    for ni, ai in zip(n_list, a_list):
+        Ni = N // ni
+        _, (Mi, _) = extended_gcd(Ni, ni)
+        x += ai*Mi*Ni
+
+    return x % N
+
+
+if __name__ == '__main__':
+    x = chinese_remainder([2, 3, 5, 7, 13], [1, 2, 1, 5, 10])
+    print(x)

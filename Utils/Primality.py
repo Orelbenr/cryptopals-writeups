@@ -84,5 +84,4 @@ def generate_probable_prime(num_bits):
 
 
 if __name__ == '__main__':
-    test_prime = generate_probable_prime(1000)
-    print(test_prime)
+    pass

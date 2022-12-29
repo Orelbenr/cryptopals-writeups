@@ -103,14 +103,14 @@ Let's examine the proposed MITM attack:
 
     After step 2, *BOB* will calculate the session key as:
 
-    $$ s = (A^{b}) \mod p = p^{b} \mod p = 0 $$
+$$ s = (A^{b}) \mod p = p^{b} \mod p = 0 $$
 
 3. **BOB -> MIDDLE**: Send "B"
 4. **MIDDLE -> ALICE**: Send "p"
 
     After step 4, *ALICE* will calculate the session key as:
 
-    $$ s = (B^{a}) \mod p = p^{a} \mod p = 0 $$
+$$ s = (B^{a}) \mod p = p^{a} \mod p = 0 $$
 
 As it turns out, both parties will agree on the same key, and the MITM will be able to decrypt all the traffic.
 

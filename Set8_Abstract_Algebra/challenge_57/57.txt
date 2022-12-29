@@ -1,0 +1,95 @@
+
+// ------------------------------------------------------------
+
+57. Diffie-Hellman Revisited: Subgroup-Confinement Attacks
+
+This set is going to focus on elliptic curves. But before we get to
+that, we're going to kick things off with some classic Diffie-Hellman.
+
+Trust me, it's gonna make sense later.
+
+Let's get right into it. First, build your typical Diffie-Hellman key
+agreement: Alice and Bob exchange public keys and derive the same
+shared secret. Then Bob sends Alice some message with a MAC over
+it. Easy as pie.
+
+Use these parameters:
+
+    p = 7199773997391911030609999317773941274322764333428698921736339643928346453700085358802973900485592910475480089726140708102474957429903531369589969318716771
+    g = 4565356397095740655436854503483826832136106141639563487732438195343690437606117828318042418238184896212352329118608100083187535033402010599512641674644143
+
+The generator g has order q:
+
+    q = 236234353446506858198510045061214171961
+
+"Order" is a new word, but it just means g^q = 1 mod p. You might
+notice that q is a prime, just like p. This isn't mere chance: in
+fact, we chose q and p together such that q divides p-1 (the order or
+size of the group itself) evenly. This guarantees that an element g of
+order q will exist. (In fact, there will be q-1 such elements.)
+
+Back to the protocol. Alice and Bob should choose their secret keys as
+random integers mod q. There's no point in choosing them mod p; since
+g has order q, the numbers will just start repeating after that. You
+can prove this to yourself by verifying g^x mod p = g^(x + k*q) mod p
+for any x and k.
+
+The rest is the same as before.
+
+How can we attack this protocol? Remember what we said before about
+order: the fact that q divides p-1 guarantees the existence of
+elements of order q. What if there are smaller divisors of p-1?
+
+Spoiler alert: there are. I chose j = (p-1) / q to have many small
+factors because I want you to be happy. Find them by factoring j,
+which is:
+
+    j = 30477252323177606811760882179058908038824640750610513771646768011063128035873508507547741559514324673960576895059570
+
+You don't need to factor it all the way. Just find a bunch of factors
+smaller than, say, 2^16. There should be plenty. (Friendly tip: maybe
+avoid any repeated factors. They only complicate things.)
+
+Got 'em? Good. Now, we can use these to recover Bob's secret key using
+the Pohlig-Hellman algorithm for discrete logarithms. Here's how:
+
+1. Take one of the small factors j. Call it r. We want to find an
+   element h of order r. To find it, do:
+
+       h := rand(1, p)^((p-1)/r) mod p
+
+   If h = 1, try again.
+
+2. You're Eve. Send Bob h as your public key. Note that h is not a
+   valid public key! There is no x such that h = g^x mod p. But Bob
+   doesn't know that.
+
+3. Bob will compute:
+
+       K := h^x mod p
+
+   Where x is his secret key and K is the output shared secret. Bob
+   then sends back (m, t), with:
+
+       m := "crazy flamboyant for the rap enjoyment"
+       t := MAC(K, m)
+
+4. We (Eve) can't compute K, because h isn't actually a valid public
+   key. But we're not licked yet.
+
+   Remember how we saw that g^x starts repeating when x > q? h has the
+   same property with r. This means there are only r possible values
+   of K that Bob could have generated. We can recover K by doing a
+   brute-force search over these values until t = MAC(K, m).
+
+   Now we know Bob's secret key x mod r.
+
+5. Repeat steps 1 through 4 many times. Eventually you will know:
+
+       x = b1 mod r1
+       x = b2 mod r2
+       x = b3 mod r3
+       ...
+
+   Once (r1*r2*...*rn) > q, you'll have enough information to
+   reassemble Bob's secret key using the Chinese Remainder Theorem.

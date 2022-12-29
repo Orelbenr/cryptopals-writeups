@@ -86,3 +86,7 @@ Some of the cryptographic topics covered:
 	6. Challenge 54 - Kelsey and Kohno's Nostradamus Attack
 	7. Challenge 55 - MD4 Collisions
 	8. Challenge 56 - RC4 Single-Byte Biases
+
+
+8. [Set 8: Abstract Algebra](Set8_Abstract_Algebra)
+	1. [Challenge 57 - Diffie-Hellman Revisited: Small Subgroup](Set8_Abstract_Algebra/challenge_57)
