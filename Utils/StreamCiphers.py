@@ -1,4 +1,4 @@
-from Utils.bytes_logic import xor_bytes
+from Utils.BytesLogic import xor_bytes
 
 
 class RC4:

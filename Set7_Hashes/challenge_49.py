@@ -88,7 +88,7 @@ from dataclasses import dataclass
 from Crypto.Random import get_random_bytes
 
 from Utils.AES import aes_cbc_encrypt
-from Utils.bytes_logic import xor_bytes
+from Utils.BytesLogic import xor_bytes
 
 
 # declare types

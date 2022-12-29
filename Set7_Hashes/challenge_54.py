@@ -53,7 +53,7 @@ from dataclasses import dataclass
 from Crypto.Cipher import AES
 
 from challenge_53 import merkle_damgard
-from Utils.helpers import timeit
+from Utils.Helpers import timeit
 
 
 @dataclass

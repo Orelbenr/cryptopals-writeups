@@ -35,7 +35,7 @@ Before you implement this attack, answer this question: why does CBC mode have t
 from Crypto.Random import get_random_bytes
 
 from Utils.AES import aes_cbc_decrypt, aes_cbc_encrypt
-from Utils.bytes_logic import xor_bytes
+from Utils.BytesLogic import xor_bytes
 
 # globals
 AES_BLOCK_SIZE = 16

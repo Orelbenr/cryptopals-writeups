@@ -23,7 +23,7 @@ Imagine if you'd relied on that advice to, say, encrypt a disk.
 import base64
 from Crypto.Random import get_random_bytes
 
-from Utils.bytes_logic import xor_bytes
+from Utils.BytesLogic import xor_bytes
 from Utils.AES import aes_ecb_decrypt, AesCtr
 
 # globals

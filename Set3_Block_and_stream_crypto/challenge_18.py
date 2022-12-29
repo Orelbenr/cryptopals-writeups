@@ -50,7 +50,7 @@ import random
 from typing import Literal
 from Crypto.Cipher import AES
 
-from Utils.bytes_logic import xor_bytes
+from Utils.BytesLogic import xor_bytes
 
 
 class AesCtr:

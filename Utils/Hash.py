@@ -3,7 +3,7 @@ import struct
 import hashlib
 from collections.abc import Callable
 
-from Utils.bytes_logic import circular_left_shit, xor_bytes
+from Utils.BytesLogic import circular_left_shit, xor_bytes
 
 
 def SHA1(msg: bytes, h0=0x67452301, h1=0xEFCDAB89, h2=0x98BADCFE,

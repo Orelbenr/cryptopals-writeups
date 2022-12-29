@@ -25,7 +25,7 @@ import math
 from Crypto.Random import get_random_bytes, random
 
 from challenge_21 import MT19937
-from Utils.bytes_logic import xor_bytes
+from Utils.BytesLogic import xor_bytes
 
 
 class MT19937Cipher:

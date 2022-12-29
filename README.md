@@ -90,3 +90,4 @@ Some of the cryptographic topics covered:
 
 8. [Set 8: Abstract Algebra](Set8_Abstract_Algebra)
 	1. [Challenge 57 - Diffie-Hellman Revisited: Small Subgroup](Set8_Abstract_Algebra/challenge_57)
+	2. [Challenge 58 - Pollard's Method for Catching Kangaroos](Set8_Abstract_Algebra/challenge_58)

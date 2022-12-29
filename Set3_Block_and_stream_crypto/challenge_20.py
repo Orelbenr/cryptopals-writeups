@@ -24,7 +24,7 @@ from Crypto.Random import get_random_bytes
 
 from Set1_Basics.challenge_6 import decode_single_byte_xor_cypher, transpose_blocks
 from challenge_18 import AesCtr
-from Utils.bytes_logic import xor_bytes
+from Utils.BytesLogic import xor_bytes
 
 # globals
 AES_BLOCK_SIZE = 16

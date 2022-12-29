@@ -48,8 +48,8 @@ import struct
 from dataclasses import dataclass
 from typing import Literal
 
-from Utils.bytes_logic import lrot, rrot
-from Utils.helpers import timeit
+from Utils.BytesLogic import lrot, rrot
+from Utils.Helpers import timeit
 
 from Crypto.Hash import MD4
 

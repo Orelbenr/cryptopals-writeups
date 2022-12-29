@@ -5,7 +5,7 @@ from typing import Literal
 from Crypto.Cipher import AES
 
 from Utils.Padding import pkcs7_pad, pkcs7_unpad
-from Utils.bytes_logic import xor_bytes
+from Utils.BytesLogic import xor_bytes
 
 
 def aes_ecb_encrypt(plaintext: bytes, key: bytes, add_padding=True) -> bytes:

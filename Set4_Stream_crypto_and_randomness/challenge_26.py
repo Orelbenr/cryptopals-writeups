@@ -11,7 +11,7 @@ Inject an "admin=true" token.
 
 from Crypto.Random import get_random_bytes
 
-from Utils.bytes_logic import xor_bytes
+from Utils.BytesLogic import xor_bytes
 from Utils.AES import AesCtr
 
 # globals

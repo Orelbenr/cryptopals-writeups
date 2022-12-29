@@ -34,7 +34,7 @@ What would happen if you subjected each tempered output to a cryptographic hash?
 import random
 
 from challenge_21 import MT19937
-from Utils.bytes_logic import bitlist_2_int, int_2_bitlist
+from Utils.BytesLogic import bitlist_2_int, int_2_bitlist
 
 # Globals
 (w, n, m, r) = (32, 624, 397, 31)

@@ -11,7 +11,7 @@ By the time you're done, you will have written an ad hoc, informally-specified, 
 ## Table of contents
 
 57. [Diffie-Hellman Revisited: Small Subgroup Confinement](challenge_57)
-58. Pollard's Method for Catching Kangaroos
+58. [Pollard's Method for Catching Kangaroos](challenge_58)
 59. Elliptic Curve Diffie-Hellman and Invalid-Curve Attacks
 60. Single-Coordinate Ladders and Insecure Twists
 61. Duplicate-Signature Key Selection in ECDSA (and RSA)

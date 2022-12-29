@@ -64,7 +64,7 @@ from Crypto.Random import get_random_bytes
 from Crypto.Cipher import ARC4
 from tqdm import tqdm
 
-from Utils.helpers import timeit
+from Utils.Helpers import timeit
 
 # Consts
 KEY_SIZE = 128 // 8
