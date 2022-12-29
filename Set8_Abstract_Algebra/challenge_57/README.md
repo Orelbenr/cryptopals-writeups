@@ -43,7 +43,7 @@ $$ K = h^{a}_{i} \pmod p $$
 
 where $a$ is Bob's secret key.
 
-As we noted, $h_{i}$ has order $r_{i}$, and thus $h^{a}_{i}$ has only $r_{i}$ possible values. 
+As we noted, $h_{i}$ has order $r_{i}$, and thus $h_{i}^{a}$ has only $r_{i}$ possible values. 
 
 We find the correct value using brute-force search (that's why we picked small $r_{i}$'s), and obtain:
 
