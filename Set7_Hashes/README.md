@@ -1136,7 +1136,7 @@ And we get the following distributions for num_repetitions=2^30:
 ### Recovering the Plaintext Using Maximum-Likelihood Approach
 For a fixed position $r$ and plaintext byte $\mu$ for that position, define:
 
-$$ N_{k}^{(\mu)} = | \{ j \in [1,S]: C_{j,r} = k \oplus \mu \} | $$
+$$ N_{k}^{(\mu)} = | \lbrace j \in [1,S]: C_{j,r} = k \oplus \mu \rbrace | $$
 
 $$ (0x00 ≤ k ≤ 0xFF) $$
 
@@ -1154,7 +1154,7 @@ $$ P(N_{0}^{(\mu)},...,N_{0xFF}^{(\mu)} | \mu) = \frac{S!}{N_{0}^{(\mu)}! \cdots
 
 We wish to estimate $\mu$ using MLE approach:
 
-$$ \hat{\mu} = \underset{\mu}{\operatorname{argmax}} P(N_{0}^{(\mu)},...,N_{0xFF}^{(\mu)} | \mu) $$ 
+$$ \hat{\mu} = \underset{\mu}{\mathrm{argmax}} P(N_{0}^{(\mu)},...,N_{0xFF}^{(\mu)} | \mu) $$ 
 
 Note that -
 
@@ -1164,13 +1164,13 @@ for all $k$ , and thus the first term of the distribution is identical for diffe
 
 We get:
 
-$$ \hat{\mu} = \underset{\mu}{\operatorname{argmax}} P(N_{0}^{(\mu)},...,N_{0xFF}^{(\mu)} | \mu) $$ 
+$$ \hat{\mu} = \underset{\mu}{\mathrm{argmax}} P(N_{0}^{(\mu)},...,N_{0xFF}^{(\mu)} | \mu) $$ 
 
-$$ = \underset{\mu}{\operatorname{argmax}} \frac{S!}{N_{0}^{(\mu)}! \cdots N_{0xFF}^{(\mu)}!} \prod_{k=0}^{0xFF} p_{r,k}^{N_{k}^{(\mu)}} $$ 
+$$ = \underset{\mu}{\mathrm{argmax}} \frac{S!}{N_{0}^{(\mu)}! \cdots N_{0xFF}^{(\mu)}!} \prod_{k=0}^{0xFF} p_{r,k}^{N_{k}^{(\mu)}} $$ 
 
-$$ = \underset{\mu}{\operatorname{argmax}} \prod_{k=0}^{0xFF} p_{r,k}^{N_{k}^{(\mu)}} $$ 
+$$ = \underset{\mu}{\mathrm{argmax}} \prod_{k=0}^{0xFF} p_{r,k}^{N_{k}^{(\mu)}} $$ 
 
-$$ = \underset{\mu}{\operatorname{argmax}} \sum_{k=0}^{0xFF} N_{k}^{(\mu)} \cdot \log{(p_{r,k})}  $$ 
+$$ = \underset{\mu}{\mathrm{argmax}} \sum_{k=0}^{0xFF} N_{k}^{(\mu)} \cdot \log{(p_{r,k})}  $$ 
 
 We create a function that estimates $\mu$ for a fixed position $r$ :
 ```python
